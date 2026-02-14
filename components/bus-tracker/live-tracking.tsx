@@ -70,10 +70,10 @@ function getBusColor(busId: number) {
 function getStopMapPositions() {
   return stops.map((s, i) => {
     const angle = (i / stops.length) * Math.PI * 2 - Math.PI / 2
-    const rx = 170
-    const ry = 95
-    const cx = 300
-    const cy = 155
+    const rx = 300
+    const ry = 180
+    const cx = 400
+    const cy = 230
     return {
       ...s,
       mx: cx + rx * Math.cos(angle),
@@ -109,15 +109,15 @@ function RouteMap({ buses }: { buses: BusState[] }) {
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5 lg:p-8">
-      <div className="mb-5 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#E53935]/10">
-          <MapPin className="h-5 w-5 text-[#E53935]" />
+      <div className="mb-6 flex items-center gap-4">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#E53935]/10">
+          <MapPin className="h-6 w-6 text-[#E53935]" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-foreground">
+          <h2 className="text-2xl font-bold text-foreground">
             {"แผนที่เส้นทางรถเมล์ไฟฟ้า"}
           </h2>
-          <p className="text-base text-muted-foreground">
+          <p className="text-lg text-muted-foreground">
             {"เส้นทางวนรอบภายในมหาวิทยาลัย \u00b7 3 คัน"}
           </p>
         </div>
@@ -126,16 +126,16 @@ function RouteMap({ buses }: { buses: BusState[] }) {
       <div className="flex flex-col items-center gap-6 lg:flex-row">
         <div className="w-full overflow-x-auto lg:flex-1">
           <svg
-            viewBox="0 0 600 310"
-            className="mx-auto h-auto w-full max-w-[600px]"
+            viewBox="0 0 800 480"
+            className="mx-auto h-auto w-full max-w-[800px]"
           >
             {/* Route path */}
             <path
               d={pathD}
               fill="none"
               stroke="#26C6DA"
-              strokeWidth="3"
-              strokeDasharray="8 4"
+              strokeWidth="4"
+              strokeDasharray="12 6"
               opacity="0.7"
             />
             {/* Direction arrows */}
@@ -151,7 +151,7 @@ function RouteMap({ buses }: { buses: BusState[] }) {
                   transform={`translate(${midX}, ${midY}) rotate(${angle})`}
                 >
                   <polygon
-                    points="0,-3 6,0 0,3"
+                    points="0,-5 10,0 0,5"
                     fill="#26C6DA"
                     opacity="0.6"
                   />
@@ -176,15 +176,15 @@ function RouteMap({ buses }: { buses: BusState[] }) {
                     <circle
                       cx={s.mx}
                       cy={s.my}
-                      r="20"
+                      r="30"
                       fill="none"
                       stroke={getBusColor(busHere.id).main}
-                      strokeWidth="2"
+                      strokeWidth="3"
                       opacity="0.4"
                     >
                       <animate
                         attributeName="r"
-                        values="18;24;18"
+                        values="28;36;28"
                         dur="2s"
                         repeatCount="indefinite"
                       />
@@ -199,17 +199,17 @@ function RouteMap({ buses }: { buses: BusState[] }) {
                   <circle
                     cx={s.mx}
                     cy={s.my}
-                    r="15"
+                    r="22"
                     fill={busHere ? stopFill : "white"}
                     stroke={stopStroke}
-                    strokeWidth="2.5"
+                    strokeWidth="3"
                   />
                   <text
                     x={s.mx}
                     y={s.my + 1}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    fontSize="7"
+                    fontSize="11"
                     fontWeight="bold"
                     fill={busHere ? "white" : "#555"}
                   >
@@ -217,9 +217,9 @@ function RouteMap({ buses }: { buses: BusState[] }) {
                   </text>
                   <text
                     x={s.mx}
-                    y={s.my + 28}
+                    y={s.my + 38}
                     textAnchor="middle"
-                    fontSize="8"
+                    fontSize="12"
                     fill="#555"
                     fontWeight="500"
                   >
@@ -238,13 +238,13 @@ function RouteMap({ buses }: { buses: BusState[] }) {
                   <circle
                     cx={pos.x}
                     cy={pos.y}
-                    r="16"
+                    r="24"
                     fill={c.main}
                     opacity="0.15"
                   >
                     <animate
                       attributeName="r"
-                      values="14;20;14"
+                      values="22;30;22"
                       dur="2s"
                       repeatCount="indefinite"
                     />
@@ -258,17 +258,17 @@ function RouteMap({ buses }: { buses: BusState[] }) {
                   <circle
                     cx={pos.x}
                     cy={pos.y}
-                    r="12"
+                    r="18"
                     fill={c.main}
                     stroke="white"
-                    strokeWidth="2.5"
+                    strokeWidth="3"
                   />
                   <text
                     x={pos.x}
                     y={pos.y + 1}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    fontSize="9"
+                    fontSize="13"
                     fontWeight="bold"
                     fill="white"
                   >
@@ -281,13 +281,13 @@ function RouteMap({ buses }: { buses: BusState[] }) {
         </div>
 
         {/* Legend */}
-        <div className="flex flex-row flex-wrap gap-4 lg:flex-col lg:gap-3">
+        <div className="flex flex-row flex-wrap gap-4 lg:flex-col lg:gap-4">
           {buses.map((bus) => {
             const c = getBusColor(bus.id)
             return (
-              <div key={bus.id} className="flex items-center gap-2.5 text-base">
+              <div key={bus.id} className="flex items-center gap-3 text-lg">
                 <span
-                  className="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold text-white"
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-base font-bold text-white"
                   style={{ backgroundColor: c.main }}
                 >
                   {bus.id}
@@ -296,12 +296,12 @@ function RouteMap({ buses }: { buses: BusState[] }) {
               </div>
             )
           })}
-          <div className="flex items-center gap-2.5 text-base">
-            <span className="h-5 w-5 rounded-full border-2 border-[#BDBDBD] bg-white" />
+          <div className="flex items-center gap-3 text-lg">
+            <span className="h-6 w-6 rounded-full border-2 border-[#BDBDBD] bg-white" />
             <span className="text-foreground">{"จุดจอด"}</span>
           </div>
-          <div className="flex items-center gap-2.5 text-base">
-            <span className="h-5 w-5 border-t-2 border-dashed border-[#26C6DA]" />
+          <div className="flex items-center gap-3 text-lg">
+            <span className="h-6 w-6 border-t-2 border-dashed border-[#26C6DA]" />
             <span className="text-foreground">{"เส้นทาง"}</span>
           </div>
         </div>
