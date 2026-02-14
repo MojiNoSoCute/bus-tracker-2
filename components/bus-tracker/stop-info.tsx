@@ -1,0 +1,116 @@
+"use client"
+
+import { stops, FACILITY_MAP } from "@/lib/bus-data"
+import {
+  Droplets,
+  ShoppingCart,
+  CreditCard,
+  Coffee,
+  CircleParking,
+  Wifi,
+  UtensilsCrossed,
+  Pill,
+  Store,
+  Dumbbell,
+  BookOpen,
+  Heart,
+} from "lucide-react"
+import type React from "react"
+
+const FACILITY_ICONS: Record<string, React.ElementType> = {
+  toilet: Droplets,
+  market: ShoppingCart,
+  atm: CreditCard,
+  cafe: Coffee,
+  parking: CircleParking,
+  wifi: Wifi,
+  food: UtensilsCrossed,
+  pharmacy: Pill,
+  store: Store,
+  gym: Dumbbell,
+  library: BookOpen,
+  hospital: Heart,
+}
+
+const cardColors = [
+  "from-[#e63462] to-[#fe5196]",
+  "from-[#e63462] to-[#fe5196]",
+  "from-[#e63462] to-[#fe5196]",
+  "from-[#FF9800] to-[#FFB74D]",
+  "from-[#FF9800] to-[#FFB74D]",
+  "from-[#FF9800] to-[#FFB74D]",
+  "from-[#4CAF50] to-[#66BB6A]",
+  "from-[#4CAF50] to-[#66BB6A]",
+  "from-[#4CAF50] to-[#66BB6A]",
+  "from-[#26C6DA] to-[#4DD0E1]",
+]
+
+export function StopInfo() {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {stops.map((stop, idx) => (
+        <div
+          key={stop.id}
+          className="overflow-hidden rounded-2xl border border-border bg-card"
+        >
+          {/* Header */}
+          <div
+            className={`bg-gradient-to-r ${cardColors[idx]} flex items-center gap-3 px-4 py-3 text-white`}
+          >
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/25 text-sm font-bold">
+              {stop.id}
+            </span>
+            <div>
+              <h3 className="font-bold leading-tight">{stop.name}</h3>
+              <p className="text-xs text-white/80">{stop.nameEn}</p>
+            </div>
+          </div>
+          {/* Body */}
+          <div className="space-y-4 p-4">
+            <div>
+              <p className="text-xs text-muted-foreground">{"รหัสจุดจอด"}</p>
+              <p className="text-2xl font-bold text-foreground">P{stop.id}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">
+                {"สิ่งอำนวยความสะดวกใกล้เคียง"}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {stop.facilities.map((fName) => {
+                  const fac = FACILITY_MAP[fName]
+                  if (!fac) return null
+                  const Icon = FACILITY_ICONS[fac.icon]
+                  return (
+                    <span
+                      key={fName}
+                      className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium text-white"
+                      style={{ backgroundColor: fac.color }}
+                    >
+                      {Icon && <Icon className="h-3 w-3" />}
+                      {fac.label}
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">
+                {"ตำแหน่งพิกัดแผนที่"}
+              </p>
+              <div className="mt-1.5 grid grid-cols-2 gap-2">
+                <div className="rounded-lg bg-secondary/50 px-3 py-2 text-center">
+                  <p className="text-[10px] text-muted-foreground">X</p>
+                  <p className="text-sm font-bold text-foreground">{stop.x}</p>
+                </div>
+                <div className="rounded-lg bg-secondary/50 px-3 py-2 text-center">
+                  <p className="text-[10px] text-muted-foreground">Y</p>
+                  <p className="text-sm font-bold text-foreground">{stop.y}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
