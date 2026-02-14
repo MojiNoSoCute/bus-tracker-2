@@ -108,16 +108,16 @@ function RouteMap({ buses }: { buses: BusState[] }) {
   const pathD = `M ${pathPoints} Z`
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 lg:p-6">
-      <div className="mb-4 flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E53935]/10">
-          <MapPin className="h-4 w-4 text-[#E53935]" />
+    <div className="rounded-2xl border border-border bg-card p-5 lg:p-8">
+      <div className="mb-5 flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#E53935]/10">
+          <MapPin className="h-5 w-5 text-[#E53935]" />
         </div>
         <div>
-          <h2 className="font-bold text-foreground">
+          <h2 className="text-xl font-bold text-foreground">
             {"แผนที่เส้นทางรถเมล์ไฟฟ้า"}
           </h2>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-base text-muted-foreground">
             {"เส้นทางวนรอบภายในมหาวิทยาลัย \u00b7 3 คัน"}
           </p>
         </div>
@@ -281,13 +281,13 @@ function RouteMap({ buses }: { buses: BusState[] }) {
         </div>
 
         {/* Legend */}
-        <div className="flex flex-row flex-wrap gap-3 lg:flex-col lg:gap-2">
+        <div className="flex flex-row flex-wrap gap-4 lg:flex-col lg:gap-3">
           {buses.map((bus) => {
             const c = getBusColor(bus.id)
             return (
-              <div key={bus.id} className="flex items-center gap-2 text-xs">
+              <div key={bus.id} className="flex items-center gap-2.5 text-base">
                 <span
-                  className="flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold text-white"
                   style={{ backgroundColor: c.main }}
                 >
                   {bus.id}
@@ -296,12 +296,12 @@ function RouteMap({ buses }: { buses: BusState[] }) {
               </div>
             )
           })}
-          <div className="flex items-center gap-2 text-xs">
-            <span className="h-3 w-3 rounded-full border-2 border-[#BDBDBD] bg-white" />
+          <div className="flex items-center gap-2.5 text-base">
+            <span className="h-5 w-5 rounded-full border-2 border-[#BDBDBD] bg-white" />
             <span className="text-foreground">{"จุดจอด"}</span>
           </div>
-          <div className="flex items-center gap-2 text-xs">
-            <span className="h-4 w-4 border-t-2 border-dashed border-[#26C6DA]" />
+          <div className="flex items-center gap-2.5 text-base">
+            <span className="h-5 w-5 border-t-2 border-dashed border-[#26C6DA]" />
             <span className="text-foreground">{"เส้นทาง"}</span>
           </div>
         </div>
@@ -327,35 +327,52 @@ function BusCard({ bus }: { bus: BusState }) {
     <div
       className="overflow-hidden rounded-2xl border-2 shadow-sm transition-all"
       style={{
-        borderColor: bus.isDwelling ? c.main : "hsl(var(--border))",
+        borderColor: c.main,
         backgroundColor: "hsl(var(--card))",
+        boxShadow: !bus.isDwelling
+          ? `0 0 16px 2px ${c.ring}, 0 0 0 1px ${c.main}`
+          : undefined,
       }}
     >
       {/* Header */}
-      <div className="px-4 py-3 text-white" style={{ backgroundColor: c.main }}>
+      <div className="px-5 py-4 text-white" style={{ backgroundColor: c.main }}>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Bus className="h-5 w-5" />
-            <h3 className="font-bold">{bus.name}</h3>
+          <div className="flex items-center gap-2.5">
+            <Bus className="h-7 w-7" />
+            <h3 className="text-xl font-bold">{bus.name}</h3>
           </div>
-          <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs backdrop-blur-sm">
+          <span className={`inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-base backdrop-blur-sm ${bus.isDwelling ? "bg-white/20" : "bg-white/25"}`}>
+            {!bus.isDwelling && (
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-300 opacity-75" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-400" />
+              </span>
+            )}
             {bus.isDwelling ? "จอดอยู่" : `${bus.speed} กม./ชม.`}
           </span>
         </div>
       </div>
 
-      <div className="space-y-3 p-4">
+      <div className="space-y-4 p-5">
         {/* Current location */}
         <div
-          className="rounded-xl p-3"
+          className="rounded-xl p-4"
           style={{ backgroundColor: bus.isDwelling ? c.light : "hsl(var(--secondary) / 0.5)" }}
         >
-          <p className="text-xs text-muted-foreground">
+          <p className="text-base text-muted-foreground">
             {bus.isDwelling ? "จอดอยู่ที่" : "กำลังออกจาก"}
           </p>
-          <p className="font-semibold text-foreground">{currentStop.name}</p>
+          <p className="inline-flex items-center gap-2 text-lg font-semibold text-foreground">
+            {currentStop.name}
+            {bus.isDwelling && (
+              <span className="relative flex h-3.5 w-3.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-red-500" />
+              </span>
+            )}
+          </p>
           {bus.isDwelling && (
-            <p className="text-xs" style={{ color: c.text }}>
+            <p className="text-base" style={{ color: c.text }}>
               {currentStop.nameEn}
             </p>
           )}
@@ -364,18 +381,18 @@ function BusCard({ bus }: { bus: BusState }) {
         {/* Dwell countdown */}
         {bus.isDwelling && (
           <div
-            className="flex items-center justify-between rounded-xl px-3 py-2.5"
+            className="flex items-center justify-between rounded-xl px-4 py-3"
             style={{ backgroundColor: c.light }}
           >
-            <div className="flex items-center gap-2">
-              <Timer className="h-4 w-4" style={{ color: c.main }} />
-              <span className="text-xs font-medium text-foreground">
+            <div className="flex items-center gap-2.5">
+              <Timer className="h-6 w-6" style={{ color: c.main }} />
+              <span className="text-base font-medium text-foreground">
                 {"จอดรออีก"}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
               <span
-                className="rounded-lg px-2.5 py-1 font-mono text-sm font-bold text-white"
+                className="rounded-lg px-4 py-2 font-mono text-lg font-bold text-white"
                 style={{ backgroundColor: c.main }}
               >
                 {formatTime(bus.dwellRemaining)}
@@ -385,17 +402,17 @@ function BusCard({ bus }: { bus: BusState }) {
         )}
 
         {/* Next stop + ETA */}
-        <div className="flex items-center gap-2 rounded-xl bg-secondary/50 px-3 py-2.5">
-          <Navigation className="h-4 w-4 shrink-0" style={{ color: c.main }} />
+        <div className="flex items-center gap-3 rounded-xl bg-secondary/50 px-4 py-3">
+          <Navigation className="h-6 w-6 shrink-0" style={{ color: c.main }} />
           <div className="flex-1">
-            <p className="text-[10px] text-muted-foreground">{"จุดถัดไป"}</p>
-            <p className="text-xs font-medium text-foreground">
+            <p className="text-sm text-muted-foreground">{"จุดถัดไป"}</p>
+            <p className="text-base font-medium text-foreground">
               {nextStop.name}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-[10px] text-muted-foreground">{"ถึงใน"}</p>
-            <p className="text-sm font-bold" style={{ color: c.main }}>
+            <p className="text-sm text-muted-foreground">{"ถึงใน"}</p>
+            <p className="text-lg font-bold" style={{ color: c.main }}>
               {`${formatMinutes(etaToNext)} นาที`}
             </p>
           </div>
@@ -403,21 +420,21 @@ function BusCard({ bus }: { bus: BusState }) {
 
         {/* Speed */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <Gauge className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">{"ความเร็วเฉลี่ย"}</span>
+          <div className="flex items-center gap-2.5">
+            <Gauge className="h-5 w-5 text-muted-foreground" />
+            <span className="text-base text-muted-foreground">{"ความเร็วเฉลี่ย"}</span>
           </div>
-          <span className="ml-auto text-xs font-medium text-foreground">{"26 กม./ชม."}</span>
+          <span className="ml-auto text-base font-medium text-foreground">{"26 กม./ชม."}</span>
         </div>
 
         {/* Passengers */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <Users className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">{"ผู้โดยสาร"}</span>
+          <div className="flex items-center gap-2.5">
+            <Users className="h-5 w-5 text-muted-foreground" />
+            <span className="text-base text-muted-foreground">{"ผู้โดยสาร"}</span>
           </div>
           <div className="flex-1">
-            <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
+            <div className="h-2.5 overflow-hidden rounded-full bg-secondary">
               <div
                 className="h-full rounded-full transition-all duration-1000"
                 style={{
@@ -427,17 +444,17 @@ function BusCard({ bus }: { bus: BusState }) {
               />
             </div>
           </div>
-          <span className="text-xs font-medium text-foreground">{bus.passengers}</span>
+          <span className="text-base font-medium text-foreground">{bus.passengers}</span>
         </div>
 
         {/* Battery */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <Battery className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">{"แบตเตอรี่"}</span>
+          <div className="flex items-center gap-2.5">
+            <Battery className="h-5 w-5 text-muted-foreground" />
+            <span className="text-base text-muted-foreground">{"แบตเตอรี่"}</span>
           </div>
           <div className="flex-1">
-            <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
+            <div className="h-2.5 overflow-hidden rounded-full bg-secondary">
               <div
                 className="h-full rounded-full transition-all duration-1000"
                 style={{
@@ -448,16 +465,27 @@ function BusCard({ bus }: { bus: BusState }) {
               />
             </div>
           </div>
-          <span className="text-xs font-medium text-foreground">{bus.battery}%</span>
+          <span className="text-base font-medium text-foreground">{bus.battery}%</span>
         </div>
 
         {/* Status */}
-        <div className="flex items-center justify-between rounded-xl bg-secondary/50 px-3 py-2">
-          <span className="text-xs text-muted-foreground">{"สถานะ"}</span>
+        <div className="flex items-center justify-between rounded-xl bg-secondary/50 px-5 py-3.5">
+          <span className="text-base text-muted-foreground">{"สถานะ"}</span>
           <span
-            className="rounded-full px-2 py-0.5 text-xs font-medium text-white"
+            className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-base font-medium text-white"
             style={{ backgroundColor: c.main }}
           >
+            {bus.isDwelling ? (
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-300 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-red-400" />
+              </span>
+            ) : (
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-300 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-green-400" />
+              </span>
+            )}
             {bus.status}
           </span>
         </div>
@@ -471,26 +499,26 @@ function BusCard({ bus }: { bus: BusState }) {
 /* ------------------------------------------------------------------ */
 function StopTimeline({ buses }: { buses: BusState[] }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 lg:p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#FF9800]/10">
-            <Clock className="h-4 w-4 text-[#FF9800]" />
+    <div className="rounded-2xl border border-border bg-card p-5 lg:p-8">
+      <div className="mb-5 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#FF9800]/10">
+            <Clock className="h-5 w-5 text-[#FF9800]" />
           </div>
           <div>
-            <h2 className="font-bold text-foreground">{"เวลาเทียบและจุดจอด"}</h2>
-            <p className="text-xs text-muted-foreground">
+            <h2 className="text-xl font-bold text-foreground">{"เวลาเทียบและจุดจอด"}</h2>
+            <p className="text-base text-muted-foreground">
               {"อัพเดต: ข้อมูลจราจรล่าสุดทุกจุดจอด \u00b7 3 คัน"}
             </p>
           </div>
         </div>
-        <span className="flex items-center gap-1 rounded-full bg-[#F44336] px-2.5 py-0.5 text-xs font-semibold text-white">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+        <span className="flex items-center gap-1.5 rounded-full bg-[#F44336] px-3.5 py-1.5 text-base font-semibold text-white">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
           LIVE
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
         {stops.map((stop, idx) => {
           /* Which bus is currently parked here? */
           const dwellingBus = buses.find(
@@ -522,44 +550,50 @@ function StopTimeline({ buses }: { buses: BusState[] }) {
             >
               {/* Stop header - colored with bus color when parked */}
               <div
-                className="px-3 py-2 text-white"
+                className="px-4 py-3 text-white"
                 style={{
                   backgroundColor: dwellingColor ? dwellingColor.main : "#78909C",
                 }}
               >
-                <div className="flex items-center gap-1.5">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/25 text-[10px] font-bold">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/25 text-sm font-bold">
                     {stop.code}
                   </span>
-                  <span className="truncate text-xs font-semibold">{stop.name}</span>
+                  <span className="truncate text-base font-semibold">{stop.name}</span>
+                  {dwellingBus && (
+                    <span className="relative ml-auto flex h-3 w-3 shrink-0">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                      <span className="relative inline-flex h-3 w-3 rounded-full bg-red-500" />
+                    </span>
+                  )}
                 </div>
               </div>
 
-              <div className="space-y-1.5 p-2.5">
+              <div className="space-y-2 p-3">
                 {/* Bus is parked here */}
                 {dwellingBus && dwellingColor && (
                   <div
-                    className="rounded-lg px-2 py-2"
+                    className="rounded-lg px-3 py-2.5"
                     style={{ backgroundColor: `${dwellingColor.main}15` }}
                   >
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-2.5">
                       <span
-                        className="flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                        className="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold text-white"
                         style={{ backgroundColor: dwellingColor.main }}
                       >
                         {dwellingBus.id}
                       </span>
                       <span
-                        className="text-[11px] font-bold"
+                        className="text-base font-bold"
                         style={{ color: dwellingColor.main }}
                       >
                         {`รถ ${dwellingBus.id} จอดอยู่`}
                       </span>
                     </div>
-                    <div className="mt-1.5 flex items-center justify-between">
-                      <span className="text-[10px] text-muted-foreground">{"ออกอีก"}</span>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">{"ออกอีก"}</span>
                       <span
-                        className="rounded-md px-2 py-0.5 font-mono text-[11px] font-bold text-white"
+                        className="rounded-md px-3 py-1.5 font-mono text-sm font-bold text-white"
                         style={{ backgroundColor: dwellingColor.main }}
                       >
                         {formatTime(dwellingBus.dwellRemaining)}
@@ -571,29 +605,29 @@ function StopTimeline({ buses }: { buses: BusState[] }) {
                 {/* Next bus arriving */}
                 {nextArrival && (
                   <div
-                    className="rounded-lg px-2 py-2"
+                    className="rounded-lg px-3 py-2.5"
                     style={{ backgroundColor: `${nextArrival.color.main}10` }}
                   >
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-2.5">
                       <span
-                        className="flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                        className="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold text-white"
                         style={{ backgroundColor: nextArrival.color.main }}
                       >
                         {nextArrival.bus.id}
                       </span>
                       <span
-                        className="text-[10px] font-medium"
+                        className="text-sm font-medium"
                         style={{ color: nextArrival.color.text }}
                       >
                         {"ถึงใน"}
                       </span>
                       <span
-                        className="ml-auto font-mono text-xs font-bold"
+                        className="ml-auto font-mono text-base font-bold"
                         style={{ color: nextArrival.color.main }}
                       >
                         {formatMinutes(nextArrival.eta)}
                       </span>
-                      <span className="text-[9px] text-muted-foreground">{"นาที"}</span>
+                      <span className="text-sm text-muted-foreground">{"นาที"}</span>
                     </div>
                   </div>
                 )}
@@ -602,36 +636,36 @@ function StopTimeline({ buses }: { buses: BusState[] }) {
                 {approachingBuses.slice(1).map((e) => (
                   <div
                     key={e.bus.id}
-                    className="flex items-center gap-1.5 rounded-lg px-2 py-1.5"
+                    className="flex items-center gap-2.5 rounded-lg px-3 py-2.5"
                     style={{ backgroundColor: `${e.color.main}08` }}
                   >
                     <span
-                      className="flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-bold text-white"
+                      className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white"
                       style={{ backgroundColor: e.color.main }}
                     >
                       {e.bus.id}
                     </span>
                     <span
-                      className="text-[10px]"
+                      className="text-sm"
                       style={{ color: e.color.text }}
                     >
                       {"ถึงใน"}
                     </span>
                     <span
-                      className="ml-auto font-mono text-[11px] font-bold"
+                      className="ml-auto font-mono text-base font-bold"
                       style={{ color: e.color.main }}
                     >
                       {formatMinutes(e.eta)}
                     </span>
-                    <span className="text-[9px] text-muted-foreground">{"นาที"}</span>
+                    <span className="text-sm text-muted-foreground">{"นาที"}</span>
                   </div>
                 ))}
 
                 {/* No bus nearby */}
                 {!dwellingBus && approachingBuses.length === 0 && (
-                  <div className="flex items-center gap-1 rounded-lg bg-secondary/50 px-2 py-1.5">
-                    <Clock className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-[10px] text-muted-foreground">
+                  <div className="flex items-center gap-1.5 rounded-lg bg-secondary/50 px-3 py-2">
+                    <Clock className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
                       {"รอข้อมูล..."}
                     </span>
                   </div>
@@ -639,9 +673,9 @@ function StopTimeline({ buses }: { buses: BusState[] }) {
 
                 {/* Nearby facility badges */}
                 {stop.facilities.length > 0 && (
-                  <div className="mt-1 border-t border-border/50 pt-2">
-                    <p className="mb-1 text-[9px] font-medium text-muted-foreground">{"สิ่งอำนวยความสะดวกใกล้เคียง"}</p>
-                    <div className="flex flex-wrap gap-1">
+                  <div className="mt-1.5 border-t border-border/50 pt-2.5">
+                    <p className="mb-1.5 text-sm font-medium text-muted-foreground">{"สิ่งอำนวยความสะดวกใกล้เคียง"}</p>
+                    <div className="flex flex-wrap gap-1.5">
                       {stop.facilities.map((fName) => {
                         const fac = FACILITY_MAP[fName]
                         if (!fac) return null
@@ -649,10 +683,10 @@ function StopTimeline({ buses }: { buses: BusState[] }) {
                         return (
                           <span
                             key={fName}
-                            className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-medium text-white"
+                            className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-white"
                             style={{ backgroundColor: fac.color }}
                           >
-                            {Icon && <Icon className="h-2.5 w-2.5" />}
+                            {Icon && <Icon className="h-3.5 w-3.5" />}
                             {fac.label}
                           </span>
                         )
@@ -667,13 +701,13 @@ function StopTimeline({ buses }: { buses: BusState[] }) {
       </div>
 
       {/* Legend row */}
-      <div className="mt-4 flex flex-wrap items-center gap-4">
+      <div className="mt-5 flex flex-wrap items-center gap-5">
         {[1, 2, 3].map((id) => {
           const c = getBusColor(id)
           return (
-            <div key={id} className="flex items-center gap-1.5 text-xs">
+            <div key={id} className="flex items-center gap-2.5 text-base">
               <span
-                className="flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-bold text-white"
+                className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white"
                 style={{ backgroundColor: c.main }}
               >
                 {id}
@@ -682,13 +716,13 @@ function StopTimeline({ buses }: { buses: BusState[] }) {
             </div>
           )
         })}
-        <span className="text-[10px] text-muted-foreground">
+        <span className="text-sm text-muted-foreground">
           {"| กรอบสีแดง/เหลือง/ม่วง = มีรถจอดอยู่"}
         </span>
       </div>
 
-      <div className="mt-3 flex items-start gap-2 rounded-xl bg-[#FFF3E0] px-4 py-2.5 text-xs">
-        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#FF9800]" />
+      <div className="mt-4 flex items-start gap-2.5 rounded-xl bg-[#FFF3E0] px-5 py-3.5 text-base">
+        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[#FF9800]" />
         <span className="text-[#795548]">
           <span className="font-semibold text-[#FF9800]">{"คำเตือน: "}</span>
           {"รถเมล์จอดแต่ละจุด 5 นาที \u00b7 ใช้เวลาเดินทางระหว่างจุดจอดประมาณ 5 นาที \u00b7 แสดงข้อมูลตามเวลาจริง \u00b7 3 คันให้บริการ"}

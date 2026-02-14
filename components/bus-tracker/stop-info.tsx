@@ -55,27 +55,27 @@ export function StopInfo() {
         >
           {/* Header */}
           <div
-            className={`bg-gradient-to-r ${cardColors[idx]} flex items-center gap-3 px-4 py-3 text-white`}
+            className={`bg-gradient-to-r ${cardColors[idx]} flex items-center gap-3.5 px-5 py-4 text-white`}
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/25 text-sm font-bold">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/25 text-base font-bold">
               {stop.id}
             </span>
             <div>
-              <h3 className="font-bold leading-tight">{stop.name}</h3>
-              <p className="text-xs text-white/80">{stop.nameEn}</p>
+              <h3 className="text-lg font-bold leading-tight">{stop.name}</h3>
+              <p className="text-sm text-white/80">{stop.nameEn}</p>
             </div>
           </div>
           {/* Body */}
-          <div className="space-y-4 p-4">
+          <div className="space-y-5 p-5">
             <div>
-              <p className="text-xs text-muted-foreground">{"รหัสจุดจอด"}</p>
-              <p className="text-2xl font-bold text-foreground">P{stop.id}</p>
+              <p className="text-sm text-muted-foreground">{"รหัสจุดจอด"}</p>
+              <p className="text-3xl font-bold text-foreground">P{stop.id}</p>
             </div>
             <div>
-              <p className="text-xs font-medium text-muted-foreground">
+              <p className="text-sm font-medium text-muted-foreground">
                 {"สิ่งอำนวยความสะดวกใกล้เคียง"}
               </p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
+              <div className="mt-2.5 flex flex-wrap gap-2">
                 {stop.facilities.map((fName) => {
                   const fac = FACILITY_MAP[fName]
                   if (!fac) return null
@@ -83,10 +83,10 @@ export function StopInfo() {
                   return (
                     <span
                       key={fName}
-                      className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium text-white"
+                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-white"
                       style={{ backgroundColor: fac.color }}
                     >
-                      {Icon && <Icon className="h-3 w-3" />}
+                      {Icon && <Icon className="h-3.5 w-3.5" />}
                       {fac.label}
                     </span>
                   )
@@ -94,17 +94,17 @@ export function StopInfo() {
               </div>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 {"ตำแหน่งพิกัดแผนที่"}
               </p>
-              <div className="mt-1.5 grid grid-cols-2 gap-2">
-                <div className="rounded-lg bg-secondary/50 px-3 py-2 text-center">
-                  <p className="text-[10px] text-muted-foreground">X</p>
-                  <p className="text-sm font-bold text-foreground">{stop.x}</p>
+              <div className="mt-2 grid grid-cols-2 gap-2.5">
+                <div className="rounded-lg bg-secondary/50 px-4 py-2.5 text-center">
+                  <p className="text-xs text-muted-foreground">X</p>
+                  <p className="text-base font-bold text-foreground">{stop.x}</p>
                 </div>
-                <div className="rounded-lg bg-secondary/50 px-3 py-2 text-center">
-                  <p className="text-[10px] text-muted-foreground">Y</p>
-                  <p className="text-sm font-bold text-foreground">{stop.y}</p>
+                <div className="rounded-lg bg-secondary/50 px-4 py-2.5 text-center">
+                  <p className="text-xs text-muted-foreground">Y</p>
+                  <p className="text-base font-bold text-foreground">{stop.y}</p>
                 </div>
               </div>
             </div>
