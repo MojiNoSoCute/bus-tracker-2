@@ -69,11 +69,11 @@ function getBusColor(busId: number) {
 /* ------------------------------------------------------------------ */
 function getStopMapPositions() {
   return stops.map((s, i) => {
-    const angle = (i / stops.length) * Math.PI * 2 - Math.PI / 2
-    const rx = 300
-    const ry = 180
-    const cx = 400
-    const cy = 230
+  const angle = (i / stops.length) * Math.PI * 2 - Math.PI / 2
+  const rx = 220
+  const ry = 120
+  const cx = 300
+    const cy = 170
     return {
       ...s,
       mx: cx + rx * Math.cos(angle),
@@ -109,15 +109,15 @@ function RouteMap({ buses }: { buses: BusState[] }) {
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5 lg:p-8">
-      <div className="mb-6 flex items-center gap-4">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#E53935]/10">
-          <MapPin className="h-6 w-6 text-[#E53935]" />
+      <div className="mb-5 flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#E53935]/10">
+          <MapPin className="h-5 w-5 text-[#E53935]" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold text-foreground">
+          <h2 className="text-xl font-bold text-foreground">
             {"แผนที่เส้นทางรถเมล์ไฟฟ้า"}
           </h2>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-base text-muted-foreground">
             {"เส้นทางวนรอบภายในมหาวิทยาลัย \u00b7 3 คัน"}
           </p>
         </div>
@@ -126,8 +126,8 @@ function RouteMap({ buses }: { buses: BusState[] }) {
       <div className="flex flex-col items-center gap-6 lg:flex-row">
         <div className="w-full overflow-x-auto lg:flex-1">
           <svg
-            viewBox="0 0 800 480"
-            className="mx-auto h-auto w-full max-w-[800px]"
+            viewBox="0 0 600 360"
+            className="mx-auto h-auto w-full min-h-[450px] max-w-[900px]"
           >
             {/* Route path */}
             <path
@@ -135,8 +135,8 @@ function RouteMap({ buses }: { buses: BusState[] }) {
               fill="none"
               stroke="#26C6DA"
               strokeWidth="4"
-              strokeDasharray="12 6"
-              opacity="0.7"
+              strokeDasharray="10 5"
+              opacity="0.8"
             />
             {/* Direction arrows */}
             {mapStops.map((s, i) => {
@@ -153,7 +153,7 @@ function RouteMap({ buses }: { buses: BusState[] }) {
                   <polygon
                     points="0,-5 10,0 0,5"
                     fill="#26C6DA"
-                    opacity="0.6"
+                    opacity="0.7"
                   />
                 </g>
               )
@@ -176,7 +176,7 @@ function RouteMap({ buses }: { buses: BusState[] }) {
                     <circle
                       cx={s.mx}
                       cy={s.my}
-                      r="30"
+                      r="28"
                       fill="none"
                       stroke={getBusColor(busHere.id).main}
                       strokeWidth="3"
@@ -184,7 +184,7 @@ function RouteMap({ buses }: { buses: BusState[] }) {
                     >
                       <animate
                         attributeName="r"
-                        values="28;36;28"
+                        values="26;34;26"
                         dur="2s"
                         repeatCount="indefinite"
                       />
@@ -211,7 +211,7 @@ function RouteMap({ buses }: { buses: BusState[] }) {
                     dominantBaseline="middle"
                     fontSize="11"
                     fontWeight="bold"
-                    fill={busHere ? "white" : "#555"}
+                    fill={busHere ? "white" : "#333"}
                   >
                     {s.code}
                   </text>
@@ -220,8 +220,8 @@ function RouteMap({ buses }: { buses: BusState[] }) {
                     y={s.my + 38}
                     textAnchor="middle"
                     fontSize="12"
-                    fill="#555"
-                    fontWeight="500"
+                    fill="#333"
+                    fontWeight="600"
                   >
                     {s.name}
                   </text>
@@ -281,7 +281,7 @@ function RouteMap({ buses }: { buses: BusState[] }) {
         </div>
 
         {/* Legend */}
-        <div className="flex flex-row flex-wrap gap-4 lg:flex-col lg:gap-4">
+        <div className="flex flex-row flex-wrap gap-5 lg:flex-col lg:gap-4">
           {buses.map((bus) => {
             const c = getBusColor(bus.id)
             return (
@@ -292,17 +292,17 @@ function RouteMap({ buses }: { buses: BusState[] }) {
                 >
                   {bus.id}
                 </span>
-                <span className="text-foreground">{`รถเมล์ ${bus.id}`}</span>
+                <span className="font-medium text-foreground">{`รถเมล์ ${bus.id}`}</span>
               </div>
             )
           })}
           <div className="flex items-center gap-3 text-lg">
-            <span className="h-6 w-6 rounded-full border-2 border-[#BDBDBD] bg-white" />
-            <span className="text-foreground">{"จุดจอด"}</span>
+            <span className="h-6 w-6 rounded-full border-3 border-[#BDBDBD] bg-white" />
+            <span className="font-medium text-foreground">{"จุดจอด"}</span>
           </div>
           <div className="flex items-center gap-3 text-lg">
-            <span className="h-6 w-6 border-t-2 border-dashed border-[#26C6DA]" />
-            <span className="text-foreground">{"เส้นทาง"}</span>
+            <span className="h-6 w-6 border-t-3 border-dashed border-[#26C6DA]" />
+            <span className="font-medium text-foreground">{"เส้นทาง"}</span>
           </div>
         </div>
       </div>
@@ -725,7 +725,7 @@ function StopTimeline({ buses }: { buses: BusState[] }) {
         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[#FF9800]" />
         <span className="text-[#795548]">
           <span className="font-semibold text-[#FF9800]">{"คำเตือน: "}</span>
-          {"รถเมล์จอดแต่ละจุด 5 นาที \u00b7 ใช้เวลาเดินทางระหว่างจุดจอดประมาณ 5 นาที \u00b7 แสดงข้อมูลตามเวลาจริง \u00b7 3 คันให้บริการ"}
+          {"รถเมล์จอดแต��ละจุด 5 นาที \u00b7 ใช้เวลาเดินทางระหว่างจุดจอดประมาณ 5 นาที \u00b7 แสดงข้อมูลตามเวลาจริง \u00b7 3 คันให้บริการ"}
         </span>
       </div>
     </div>
