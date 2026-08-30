@@ -472,18 +472,20 @@ export default function LeafletMap({
           userMarkerRef.current = marker
 
           // Calculate Nearest Stop
-          let minDistance = Infinity
-          let closest = stops[0]
-          stops.forEach((s) => {
-            const dist = calculateDistanceMeters(latitude, longitude, s.lat, s.lng)
-            if (dist < minDistance) {
-              minDistance = dist
-              closest = s
-            }
-          })
+          if (stops && stops.length > 0) {
+            let minDistance = Infinity
+            let closest = stops[0]
+            stops.forEach((s) => {
+              const dist = calculateDistanceMeters(latitude, longitude, s.lat, s.lng)
+              if (dist < minDistance) {
+                minDistance = dist
+                closest = s
+              }
+            })
 
-          const walkMins = Math.max(1, Math.round(minDistance / 75)) // 75m per min walk
-          setNearestStop({ stop: closest, distance: minDistance, walkTime: walkMins })
+            const walkMins = Math.max(1, Math.round(minDistance / 75)) // 75m per min walk
+            setNearestStop({ stop: closest, distance: minDistance, walkTime: walkMins })
+          }
 
           map.flyTo([latitude, longitude], 17.5, { animate: true, duration: 1.2 })
         }
@@ -512,16 +514,18 @@ export default function LeafletMap({
           })
           userMarkerRef.current = L.marker([fakeLat, fakeLng], { icon: userIcon }).addTo(map)
 
-          let minDistance = Infinity
-          let closest = stops[0]
-          stops.forEach((s) => {
-            const dist = calculateDistanceMeters(fakeLat, fakeLng, s.lat, s.lng)
-            if (dist < minDistance) {
-              minDistance = dist
-              closest = s
-            }
-          })
-          setNearestStop({ stop: closest, distance: minDistance, walkTime: Math.max(1, Math.round(minDistance / 75)) })
+          if (stops && stops.length > 0) {
+            let minDistance = Infinity
+            let closest = stops[0]
+            stops.forEach((s) => {
+              const dist = calculateDistanceMeters(fakeLat, fakeLng, s.lat, s.lng)
+              if (dist < minDistance) {
+                minDistance = dist
+                closest = s
+              }
+            })
+            setNearestStop({ stop: closest, distance: minDistance, walkTime: Math.max(1, Math.round(minDistance / 75)) })
+          }
           map.flyTo([fakeLat, fakeLng], 17.5, { animate: true })
         }
       },
