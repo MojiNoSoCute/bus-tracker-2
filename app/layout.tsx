@@ -47,8 +47,8 @@ const notoSansThai = Noto_Sans_Thai({
  * - description: คำอธิบายสำหรับ search engines
  */
 export const metadata: Metadata = {
-  title: "Bus Tracker - Electric Bus Tracking System",
-  description: "Real-time electric bus tracking system for university campus",
+  title: "ระบบติดตามรถเมล์ไฟฟ้า มหาวิทยาลัยราชภัฏนครปฐม | NPRU EV Bus Tracker",
+  description: "ระบบติดตามตำแหน่งรถเมล์ไฟฟ้าแบบเรียลไทม์บนแผนที่จริง มหาวิทยาลัยราชภัฏนครปฐม (NPRU)",
 }
 
 /**

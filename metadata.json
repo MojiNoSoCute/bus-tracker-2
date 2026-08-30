@@ -1,0 +1,6 @@
+{
+  "name": "ระบบติดตามรถเมล์ไฟฟ้า มรภ.นครปฐม",
+  "description": "ระบบติดตามตำแหน่งรถเมล์ไฟฟ้าแบบเรียลไทม์บนแผนที่จริง มหาวิทยาลัยราชภัฏนครปฐม (Nakhon Pathom Rajabhat University - NPRU)",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

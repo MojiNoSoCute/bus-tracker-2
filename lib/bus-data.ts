@@ -1,356 +1,701 @@
 /**
  * ===================================================================
- * bus-data.ts - ข้อมูลหลักและ Logic สำหรับระบบติดตามรถเมล์ไฟฟ้า
+ * bus-data.ts - ข้อมูลและ Logic ระบบติดตามรถเมล์ไฟฟ้า มรภ.นครปฐม (NPRU)
  * ===================================================================
  * 
- * ไฟล์นี้ประกอบด้วย:
- * 1. Type definitions - กำหนดรูปแบบข้อมูล
- * 2. Constants - ค่าคงที่ต่างๆ (จุดจอด, สิ่งอำนวยความสะดวก, เวลา)
- * 3. Helper functions - ฟังก์ชันช่วยคำนวณ (ETA, format เวลา)
- * 4. Data generators - สร้างข้อมูลตารางเวลา
+ * มหาวิทยาลัยราชภัฏนครปฐม (Nakhon Pathom Rajabhat University - NPRU)
+ * พิกัดศูนย์กลาง: 13.8373° N, 100.0308° E (ถนนมาลัยแมน อ.เมือง จ.นครปฐม)
  * 
- * @author Bus Tracker Team
- * @version 1.0.0
+ * @author Bus Tracker Team - NPRU EV Smart Mobility
+ * @version 2.0.0
  */
 
 // ===================================================================
 // SECTION 1: TYPE DEFINITIONS
 // ===================================================================
 
-/**
- * Facility - สิ่งอำนวยความสะดวกใกล้จุดจอด
- * 
- * @property label - ชื่อภาษาไทยที่แสดงใน UI
- * @property icon - ชื่อ icon สำหรับ mapping กับ Lucide icons
- * @property color - สี HEX สำหรับ badge
- */
-export type Facility = {
+export type FacilityType = 
+  | "toilet" 
+  | "market" 
+  | "atm" 
+  | "cafe" 
+  | "parking" 
+  | "wifi" 
+  | "food" 
+  | "pharmacy" 
+  | "store" 
+  | "gym" 
+  | "library" 
+  | "hospital"
+  | "ev_charger"
+  | "wheelchair"
+  | "printer"
+
+export interface Facility {
   label: string
-  icon: "toilet" | "market" | "atm" | "cafe" | "parking" | "wifi" | "food" | "pharmacy" | "store" | "gym" | "library" | "hospital"
+  icon: FacilityType
   color: string
 }
 
-/**
- * BusState - สถานะปัจจุบันของรถเมล์แต่ละคัน
- * 
- * ใช้สำหรับ:
- * - แสดงตำแหน่งบนแผนที่
- * - แสดงสถานะใน BusCard
- * - คำนวณ ETA ไปยังจุดจอดต่างๆ
- * 
- * @property id - รหัสรถเมล์ (1, 2, 3)
- * @property name - ชื่อแสดงผล ("รถเมล์ที่ 1")
- * @property code - รหัสย่อ ("รถคัน 1")
- * @property currentStopIndex - index ของจุดจอดปัจจุบัน (0-9)
- * @property progress - ความคืบหน้าระหว่างจุดจอด (0.0 - 1.0)
- * @property speed - ความเร็วปัจจุบัน (กม./ชม.)
- * @property passengers - จำนวนผู้โดยสาร
- * @property battery - เปอร์เซ็นต์แบตเตอรี่
- * @property status - ข้อความสถานะภาษาไทย
- * @property isDwelling - true = จอดอยู่ที่จุดจอด, false = กำลังเดินทาง
- * @property dwellRemaining - เวลาที่เหลือในการจอด (วินาที)
- */
+export interface BusStop {
+  id: number
+  code: string
+  name: string
+  nameEn: string
+  building: string
+  description: string
+  lat: number
+  lng: number
+  facilities: string[]
+  accessible: boolean
+  isPopular?: boolean
+}
+
+export interface BusRoute {
+  id: string
+  name: string
+  nameEn: string
+  color: string
+  stops: number[] // array of stop IDs
+  description: string
+}
+
 export interface BusState {
   id: number
   name: string
   code: string
+  plateNumber: string
+  driverName: string
+  driverPhone: string
   currentStopIndex: number
-  progress: number
-  speed: number
+  progress: number // 0.0 to 1.0 between currentStopIndex and nextStopIndex
+  speed: number // km/h
   passengers: number
-  battery: number
-  status: "กำลังเดินทาง" | "จอดรับผู้โดยสาร" | "กำลังจะออก"
+  maxCapacity: number
+  battery: number // %
+  status: "กำลังเดินทาง" | "จอดรับผู้โดยสาร" | "กำลังจะออก" | "ชาร์จไฟ/พักรถ"
   isDwelling: boolean
-  dwellRemaining: number
+  dwellRemaining: number // seconds
+  routeId: string
+  currentLat: number
+  currentLng: number
+  heading: number // degrees (0 = North, 90 = East, etc.)
+  wheelchairAccessible: boolean
+  acTemp: number // Celsius
+  lastUpdated: string
 }
 
 // ===================================================================
-// SECTION 2: CONSTANTS - ค่าคงที่
+// SECTION 2: NPRU CAMPUS CONSTANTS
 // ===================================================================
 
+export const NPRU_CENTER = {
+  lat: 13.8368,
+  lng: 100.0290,
+  zoom: 17,
+}
+
+export const NPRU_BOUNDS: [[number, number], [number, number]] = [
+  [13.8330, 100.0235], // Southwest
+  [13.8408, 100.0358], // Northeast
+]
+
 /**
- * FACILITY_MAP - แผนที่ข้อมูลสิ่งอำนวยความสะดวก
- * 
- * Key: ชื่อภาษาไทย (ใช้ใน stops.facilities)
- * Value: ข้อมูลสำหรับแสดงผล (icon, สี)
- * 
- * การใช้งาน:
- * const facility = FACILITY_MAP["ห้องน้ำ"]
- * // => { label: "ห้องน้ำ", icon: "toilet", color: "#2196F3" }
+ * ขอบเขตรั้วมหาวิทยาลัยราชภัฏนครปฐม (NPRU Campus Perimeter Boundary)
+ * วาดเส้นขอบเขตสีเขียวล้อมรอบเฉพาะพื้นที่วิทยาเขต มรภ.นครปฐม ตามเส้นขอบที่ผู้ใช้ระบุในภาพ
  */
+export const NPRU_CAMPUS_POLYGON: [number, number][] = [
+  // ยอดทิศเหนือ (สวนเฉลิมพระเกียรติ / สวนป่าเหนือ ติดแนว รร.ศรีวิชัยวิทยา)
+  [13.84060, 100.03040],
+  // แนวรั้วทิศตะวันออกเฉียงเหนือเลียบฝั่งใน ถ.มาลัยแมน (ไม่ข้ามถนน)
+  [13.83980, 100.03150],
+  [13.83850, 100.03320],
+  [13.83720, 100.03480],
+  [13.83580, 100.03650],
+  [13.83480, 100.03740], // โซนตะวันออกเฉียงใต้สุดก่อนถึงแนวถนน
+  // วนรอบมุมใต้ฝั่งตะวันออกเฉียงใต้ (โซน P9)
+  [13.83430, 100.03700],
+  [13.83400, 100.03580],
+  // แนวถนนด้านใต้เลียบฝั่งใต้อาคาร 4 และลานกิจกรรม
+  [13.83450, 100.03420],
+  [13.83500, 100.03260],
+  [13.83480, 100.03140],
+  // แนวกำแพงและทางเดินด้านใต้สระน้ำ มรภ.นครปฐม
+  [13.83360, 100.03050],
+  [13.83350, 100.02850],
+  [13.83420, 100.02650],
+  // แนวกำแพงทิศตะวันตกเฉียงใต้
+  [13.83500, 100.02480],
+  // แนวกำแพงทิศตะวันตก (หลังอาคารเทคโนโลยีอุตสาหกรรม และกลุ่มอาคารปฏิบัติการ)
+  [13.83620, 100.02400],
+  [13.83750, 100.02360],
+  [13.83860, 100.02360], // มุมตะวันตกเฉียงเหนือสุด
+  // แนวกำแพงทิศเหนือ
+  [13.83890, 100.02460],
+  [13.83850, 100.02600],
+  [13.83920, 100.02700],
+  [13.84000, 100.02880],
+  // บรรจบยอดทิศเหนือ
+  [13.84060, 100.03040],
+]
+
+/**
+ * สถานที่และอาคารสำคัญภายในมหาวิทยาลัยราชภัฏนครปฐม
+ */
+export interface CampusLandmark {
+  name: string
+  nameEn: string
+  category: "academic" | "facility" | "sports" | "dorm" | "service"
+  lat: number
+  lng: number
+  iconName: string
+}
+
+export const CAMPUS_LANDMARKS: CampusLandmark[] = [
+  {
+    name: "หอประชุมปิ่นเกลียว",
+    nameEn: "Pin-Kliao Auditorium",
+    category: "academic",
+    lat: 13.83715,
+    lng: 100.02820,
+    iconName: "GraduationCap",
+  },
+  {
+    name: "คณะครุศาสตร์ (อาคาร A2)",
+    nameEn: "Faculty of Education",
+    category: "academic",
+    lat: 13.83760,
+    lng: 100.02980,
+    iconName: "Building2",
+  },
+  {
+    name: "สวนเฉลิมพระเกียรติ / สวนป่าเหนือ",
+    nameEn: "Royal Green Park",
+    category: "facility",
+    lat: 13.84000,
+    lng: 100.02880,
+    iconName: "Trees",
+  },
+  {
+    name: "อาคารเรียนรวมและนวัตกรรม (ฝั่งตะวันตก)",
+    nameEn: "West Innovation Complex",
+    category: "academic",
+    lat: 13.83750,
+    lng: 100.02650,
+    iconName: "FlaskConical",
+  },
+  {
+    name: "อาคารเทคโนโลยีอุตสาหกรรม",
+    nameEn: "Industrial Technology",
+    category: "academic",
+    lat: 13.83620,
+    lng: 100.02550,
+    iconName: "Wrench",
+  },
+  {
+    name: "คณะวิทยาการจัดการ (อาคาร 4)",
+    nameEn: "Management Sciences (Bldg 4)",
+    category: "academic",
+    lat: 13.83620,
+    lng: 100.03350,
+    iconName: "Briefcase",
+  },
+  {
+    name: "สระน้ำ มรภ.นครปฐม",
+    nameEn: "NPRU Central Lake",
+    category: "facility",
+    lat: 13.83540,
+    lng: 100.03050,
+    iconName: "Waves",
+  },
+]
+
 export const FACILITY_MAP: Record<string, Facility> = {
-  "ห้องน้ำ":        { label: "ห้องน้ำ",        icon: "toilet",   color: "#2196F3" },
-  "ตลาดนัด":        { label: "ตลาดนัด",        icon: "market",   color: "#FF9800" },
-  "ตู้ ATM":        { label: "ตู้ ATM",        icon: "atm",      color: "#4CAF50" },
-  "ร้านกาแฟ":       { label: "ร้านกาแฟ",       icon: "cafe",     color: "#795548" },
-  "ที่จอดรถ":       { label: "ที่จอดรถ",       icon: "parking",  color: "#607D8B" },
-  "Wi-Fi":          { label: "Wi-Fi",          icon: "wifi",     color: "#9C27B0" },
-  "ร้านอาหาร":      { label: "ร้านอาหาร",      icon: "food",     color: "#F44336" },
-  "ร้านยา":         { label: "ร้านยา",         icon: "pharmacy", color: "#00BCD4" },
-  "ร้านสะดวกซื้อ":  { label: "ร้านสะดวกซื้อ",  icon: "store",    color: "#E91E63" },
-  "ฟิตเนส":         { label: "ฟิตเนส",         icon: "gym",      color: "#FF5722" },
-  "ห้องสมุด":       { label: "ห้องสมุด",       icon: "library",  color: "#3F51B5" },
-  "โรงพยาบาล":      { label: "โรงพยาบาล",      icon: "hospital", color: "#F44336" },
+  "ห้องน้ำ":            { label: "ห้องน้ำ",            icon: "toilet",      color: "#2196F3" },
+  "ตลาดนัด/ร้านค้า":    { label: "ตลาดนัด/ร้านค้า",    icon: "market",      color: "#FF9800" },
+  "ตู้ ATM/ธนาคาร":     { label: "ตู้ ATM/ธนาคาร",     icon: "atm",         color: "#4CAF50" },
+  "ร้านกาแฟ":           { label: "ร้านกาแฟ",           icon: "cafe",        color: "#795548" },
+  "ที่จอดรถยนต์/มอเตอร์ไซค์": { label: "ที่จอดรถ",      icon: "parking",     color: "#607D8B" },
+  "Wi-Fi NPRU-Smart":   { label: "Wi-Fi มหาวิทยาลัย", icon: "wifi",        color: "#9C27B0" },
+  "ศูนย์อาหาร/ร้านข้าว": { label: "ศูนย์อาหาร",        icon: "food",        color: "#F44336" },
+  "ร้านยา/ห้องปฐมพยาบาล": { label: "ห้องพยาบาล/ยา",   icon: "pharmacy",    color: "#00BCD4" },
+  "7-Eleven/ร้านสะดวกซื้อ": { label: "ร้านสะดวกซื้อ",   icon: "store",       color: "#E91E63" },
+  "ฟิตเนส/สนามกีฬา":    { label: "ฟิตเนส/สนามกีฬา",    icon: "gym",         color: "#FF5722" },
+  "ห้องสมุด/Co-Working": { label: "ห้องสมุด/Co-Working", icon: "library",   color: "#3F51B5" },
+  "ศูนย์บริการสาธารณสุข": { label: "ศูนย์แพทย์",       icon: "hospital",    color: "#D32F2F" },
+  "จุดชาร์จ EV":        { label: "จุดชาร์จ EV",        icon: "ev_charger",  color: "#10B981" },
+  "ทางลาดวีลแชร์":       { label: "ทางลาดวีลแชร์",      icon: "wheelchair",  color: "#0284C7" },
+  "ศูนย์ถ่ายเอกสาร/พิมพ์งาน": { label: "ร้านถ่ายเอกสาร", icon: "printer",    color: "#8B5CF6" },
 }
 
 /**
- * stops - ข้อมูลจุดจอดทั้ง 10 จุด
- * 
- * เรียงตามลำดับเส้นทาง (วนรอบ: P1 -> P2 -> ... -> P10 -> P1)
- * 
- * @property id - รหัสจุดจอด (1-10)
- * @property name - ชื่อภาษาไทย
- * @property nameEn - ชื่อภาษาอังกฤษ
- * @property code - รหัสย่อ (P1-P10)
- * @property facilities - รายการสิ่งอำนวยความสะดวกใกล้เคียง
- * @property x, y - พิกัดบนแผนที่ (สำหรับ reference เท่านั้น)
+ * รายชื่อจุดจอดรถเมล์ไฟฟ้าจริง 10 จุด ภายใน มรภ.นครปฐม
  */
-export const stops = [
+export const stops: BusStop[] = [
   { 
     id: 1, 
-    name: "ประตูหลัก", 
-    nameEn: "Main Gate", 
     code: "P1", 
-    facilities: ["ที่จอดรถ", "ห้องน้ำ", "ตู้ ATM"], 
-    x: 150, 
-    y: 190 
+    name: "ประตู 1 (ประตูใหญ่ ถ.มาลัยแมน / หน้าสระน้ำ)", 
+    nameEn: "Gate 1 (Main Gate - Malaiman Rd. & Lakefront)", 
+    building: "ซุ้มประตูใหญ่ & ป้อม รปภ. กลาง",
+    description: "จุดเชื่อมต่อการเดินทางหลัก รถตู้ รถสองแถว และที่จอดรถหน้ามหาวิทยาลัย",
+    lat: 13.83535, 
+    lng: 100.02790,
+    facilities: ["ที่จอดรถยนต์/มอเตอร์ไซค์", "ห้องน้ำ", "ตู้ ATM/ธนาคาร", "Wi-Fi NPRU-Smart", "ทางลาดวีลแชร์"],
+    accessible: true,
+    isPopular: true
   },
   { 
     id: 2, 
-    name: "คณะครุศาสตร์", 
-    nameEn: "Faculty of Education", 
     code: "P2", 
-    facilities: ["ห้องน้ำ", "ร้านกาแฟ"], 
-    x: 350, 
-    y: 80 
+    name: "อาคารเทคโนโลยีอุตสาหกรรม (ฝั่งตะวันตก)", 
+    nameEn: "Industrial Technology Building (West Wing)", 
+    building: "อาคารคณะเทคโนโลยีอุตสาหกรรมและโรงประลองวิศวกรรม",
+    description: "ศูนย์วิศวกรรมศาสตร์ เทคโนโลยีอุตสาหกรรม และโรงประลองเครื่องกล",
+    lat: 13.83620, 
+    lng: 100.02550,
+    facilities: ["ห้องน้ำ", "Wi-Fi NPRU-Smart", "ทางลาดวีลแชร์", "ที่จอดรถยนต์/มอเตอร์ไซค์"],
+    accessible: true
   },
   { 
     id: 3, 
-    name: "หอสมุดกลาง", 
-    nameEn: "Central Library", 
     code: "P3", 
-    facilities: ["ห้องน้ำ", "Wi-Fi", "ร้านกาแฟ", "ห้องสมุด"], 
-    x: 560, 
-    y: 100 
+    name: "กลุ่มอาคารปฏิบัติการและนวัตกรรม (ตะวันตกสุด)", 
+    nameEn: "Innovation & Labs Complex (Far West)", 
+    building: "กลุ่มอาคารปฏิบัติการวิจัยและแปลงทดลอง",
+    description: "ห้องปฏิบัติการวิจัย นวัตกรรมเกษตรและเทคโนโลยีสิ่งแวดล้อม",
+    lat: 13.83800, 
+    lng: 100.02450,
+    facilities: ["ห้องน้ำ", "Wi-Fi NPRU-Smart", "จุดชาร์จ EV"],
+    accessible: true
   },
   { 
     id: 4, 
-    name: "อาคารวิทยาศาสตร์", 
-    nameEn: "Science Building", 
     code: "P4", 
-    facilities: ["ห้องน้ำ", "ร้านกาแฟ", "ตู้ ATM"], 
-    x: 700, 
-    y: 190 
+    name: "อาคารเรียนรวมฝั่งตะวันตก", 
+    nameEn: "West Academic & Lecture Complex", 
+    building: "อาคารเรียนรวมและศูนย์บริการวิชาการฝั่งตะวันตก",
+    description: "ห้องบรรยายรวม ลานกิจกรรมวิชาการ และศูนย์บริการนิสิต",
+    lat: 13.83715, 
+    lng: 100.02700,
+    facilities: ["ห้องน้ำ", "Wi-Fi NPRU-Smart", "ร้านกาแฟ", "ศูนย์ถ่ายเอกสาร/พิมพ์งาน"],
+    accessible: true
   },
   { 
     id: 5, 
-    name: "อาคารกีฬา", 
-    nameEn: "Sports Complex", 
     code: "P5", 
-    facilities: ["ห้องน้ำ", "ฟิตเนส", "ร้านสะดวกซื้อ"], 
-    x: 800, 
-    y: 250 
+    name: "ศูนย์ภาษาและคอมพิวเตอร์ (หอประชุมปิ่นเกลียว)", 
+    nameEn: "Language & Computer Center (Pin-Kliao Hall)", 
+    building: "อาคารศูนย์ภาษาฯ และหอประชุมใหญ่",
+    description: "สถานที่จัดพิธีพระราชทานปริญญาบัตร ศูนย์สอบไอที และห้องปฏิบัติการคอมพิวเตอร์",
+    lat: 13.83715, 
+    lng: 100.02820,
+    facilities: ["ห้องน้ำ", "ร้านกาแฟ", "Wi-Fi NPRU-Smart", "ตู้ ATM/ธนาคาร", "ทางลาดวีลแชร์"],
+    accessible: true,
+    isPopular: true
   },
   { 
     id: 6, 
-    name: "หอพักนักศึกษา", 
-    nameEn: "Student Dormitory", 
     code: "P6", 
-    facilities: ["ร้านสะดวกซื้อ", "ตลาดนัด", "ห้องน้ำ", "Wi-Fi"], 
-    x: 750, 
-    y: 370 
+    name: "สวนเฉลิมพระเกียรติ / ลานกิจกรรมเหนือ", 
+    nameEn: "Royal Green Park & North Activity Zone", 
+    building: "สวนพฤกษศาสตร์เฉลิมพระเกียรติและลานสุขภาพ",
+    description: "พื้นที่สีเขียวพักผ่อน ลานออกกำลังกายกลางแจ้ง และจุดเชื่อมต่อโซนเหนือ",
+    lat: 13.84000, 
+    lng: 100.02880,
+    facilities: ["ห้องน้ำ", "Wi-Fi NPRU-Smart", "ร้านสะดวกซื้อ/ตู้กดเครื่องดื่ม"],
+    accessible: true
   },
   { 
     id: 7, 
-    name: "คณะวิศวกรรมศาสตร์", 
-    nameEn: "Engineering Faculty", 
     code: "P7", 
-    facilities: ["ห้องน้ำ", "ที่จอดรถ", "ร้านกาแฟ"], 
-    x: 550, 
-    y: 420 
+    name: "คณะครุศาสตร์ (อาคาร A2 / อาคาร 1)", 
+    nameEn: "Faculty of Education (Building A2)", 
+    building: "อาคารเรียน A2 และสำนักงานคณบดีครุศาสตร์",
+    description: "ศูนย์การเรียนรู้วิชาชีพครู ลานกิจกรรมวิชาการ และห้องปฏิบัติการสอน",
+    lat: 13.83760, 
+    lng: 100.02980,
+    facilities: ["ห้องน้ำ", "ร้านกาแฟ", "Wi-Fi NPRU-Smart", "ศูนย์ถ่ายเอกสาร/พิมพ์งาน"],
+    accessible: true,
+    isPopular: true
   },
   { 
     id: 8, 
-    name: "อาคารบริหาร", 
-    nameEn: "Administration Building", 
     code: "P8", 
-    facilities: ["ห้องน้ำ", "ตู้ ATM", "ที่จอดรถ"], 
-    x: 350, 
-    y: 400 
+    name: "คณะวิทยาการจัดการ & กองบริการการศึกษา (อาคาร 4)", 
+    nameEn: "Faculty of Management Sciences (Building 4)", 
+    building: "อาคารเฉลิมพระเกียรติ 50 พรรษา / อาคาร 4",
+    description: "สำนักงานทะเบียนและประมวลผล กองพัฒนานักศึกษา ห้องประชุมบัณฑิต และคณะวิทยาการจัดการ",
+    lat: 13.83620, 
+    lng: 100.03350,
+    facilities: ["ตู้ ATM/ธนาคาร", "ห้องน้ำ", "Wi-Fi NPRU-Smart", "จุดชาร์จ EV", "ทางลาดวีลแชร์"],
+    accessible: true,
+    isPopular: true
   },
   { 
     id: 9, 
-    name: "โรงอาหาร", 
-    nameEn: "Canteen", 
     code: "P9", 
-    facilities: ["ร้านอาหาร", "ห้องน้ำ", "ตลาดนัด", "Wi-Fi"], 
-    x: 200, 
-    y: 350 
+    name: "อาคารเรียนรวมตะวันออกเฉียงใต้ / ลานจอดรถใต้", 
+    nameEn: "Southeast Academic Hall & South Parking", 
+    building: "อาคารเรียนรวมและศูนย์อาหารย่อยฝั่งใต้",
+    description: "ห้องบรรยายพิเศษ ลานจอดรถยนต์ และทางเชื่อมต่อกลุ่มอาคารริมน้ำ",
+    lat: 13.83440, 
+    lng: 100.03600,
+    facilities: ["ที่จอดรถยนต์/มอเตอร์ไซค์", "ห้องน้ำ", "7-Eleven/ร้านสะดวกซื้อ", "Wi-Fi NPRU-Smart"],
+    accessible: true
   },
   { 
     id: 10, 
-    name: "ศูนย์แพทย์", 
-    nameEn: "Medical Center", 
     code: "P10", 
-    facilities: ["โรงพยาบาล", "ร้านยา", "ห้องน้ำ"], 
-    x: 120, 
-    y: 230 
+    name: "ริมสระน้ำ มรภ.นครปฐม (จุดชมทัศนียภาพ & นันทนาการ)", 
+    nameEn: "NPRU Central Lakefront Promenade", 
+    building: "ลานกิจกรรมริมสระน้ำกลางมหาวิทยาลัย",
+    description: "จุดพักผ่อนริมน้ำ ลานดนตรี และทางเดินเพื่อสุขภาพรอบสระน้ำ",
+    lat: 13.83550, 
+    lng: 100.03150,
+    facilities: ["Wi-Fi NPRU-Smart", "ร้านกาแฟ", "ทางลาดวีลแชร์", "ห้องน้ำ"],
+    accessible: true,
+    isPopular: true
   },
 ]
 
-// -------------------------------------------------------------------
-// Simulation Constants - ค่าคงที่สำหรับ simulation
-// -------------------------------------------------------------------
+/**
+ * เส้นทางถนนจริงรอบมหาวิทยาลัยราชภัฏนครปฐม (วิ่งเฉพาะถนนภายในวิทยาเขต 100%)
+ * แบ่งเป็นเส้นทางย่อยระหว่างจุดจอด P1 -> P2 -> ... -> P10 -> P1 ตามแนวถนนจริงภายในมหาวิทยาลัย
+ */
+export const STOP_SEGMENTS: [number, number][][] = [
+  // 0: P1 (ประตู 1 หน้าสระน้ำ) -> P2 (อาคารเทคโนโลยีอุตสาหกรรม ฝั่งตะวันตก)
+  [
+    [13.83535, 100.02790],
+    [13.83550, 100.02730],
+    [13.83570, 100.02670],
+    [13.83600, 100.02600],
+    [13.83620, 100.02550],
+  ],
+  // 1: P2 (อาคารเทคโนโลยีอุตสาหกรรม) -> P3 (กลุ่มอาคารปฏิบัติการ ตะวันตกสุด)
+  [
+    [13.83620, 100.02550],
+    [13.83640, 100.02500],
+    [13.83700, 100.02460],
+    [13.83750, 100.02440],
+    [13.83800, 100.02450],
+  ],
+  // 2: P3 (มุมตะวันตกเฉียงเหนือ) -> P4 (อาคารเรียนรวมฝั่งตะวันตก)
+  [
+    [13.83800, 100.02450],
+    [13.83810, 100.02520],
+    [13.83805, 100.02600],
+    [13.83760, 100.02620],
+    [13.83730, 100.02650],
+    [13.83715, 100.02700],
+  ],
+  // 3: P4 (อาคารเรียนรวมตะวันตก) -> P5 (หอประชุมปิ่นเกลียว)
+  [
+    [13.83715, 100.02700],
+    [13.83710, 100.02760],
+    [13.83715, 100.02820],
+  ],
+  // 4: P5 (หอประชุมปิ่นเกลียว) -> P6 (สวนเฉลิมพระเกียรติ / โค้งเหนือสุด)
+  [
+    [13.83715, 100.02820],
+    [13.83840, 100.02840],
+    [13.83940, 100.02860],
+    [13.84000, 100.02880],
+  ],
+  // 5: P6 (โค้งเหนือสุด) -> P7 (คณะครุศาสตร์ อาคาร A2)
+  [
+    [13.84000, 100.02880],
+    [13.83920, 100.02920],
+    [13.83840, 100.02950],
+    [13.83760, 100.02980],
+  ],
+  // 6: P7 (คณะครุศาสตร์) -> P8 (คณะวิทยาการจัดการ / อาคาร 4)
+  [
+    [13.83760, 100.02980],
+    [13.83720, 100.03100],
+    [13.83670, 100.03220],
+    [13.83620, 100.03350],
+  ],
+  // 7: P8 (คณะวิทยาการจัดการ) -> P9 (อาคารเรียนรวมตะวันออกเฉียงใต้ / ใต้สุด)
+  [
+    [13.83620, 100.03350],
+    [13.83550, 100.03480],
+    [13.83490, 100.03560],
+    [13.83440, 100.03600],
+  ],
+  // 8: P9 (อาคารฝั่งใต้) -> P10 (ริมสระน้ำ มรภ.นครปฐม)
+  [
+    [13.83440, 100.03600],
+    [13.83460, 100.03450],
+    [13.83500, 100.03300],
+    [13.83550, 100.03150],
+  ],
+  // 9: P10 (ริมสระน้ำ) -> P1 (ประตู 1 หน้า ถ.มาลัยแมน)
+  [
+    [13.83550, 100.03150],
+    [13.83570, 100.03000],
+    [13.83550, 100.02880],
+    [13.83535, 100.02790],
+  ],
+]
 
 /**
- * TRAVEL_TIME_PER_SEGMENT - เวลาเดินทางระหว่างจุดจอด (วินาที)
- * 
- * ในความเป็นจริง: ~5 นาที
- * ใน simulation: เร่งความเร็ว 15 เท่า
+ * เส้นทางถนนหลักรวมทุกจุดภายในมหาวิทยาลัย
  */
-export const TRAVEL_TIME_PER_SEGMENT = 300 // 5 นาที = 300 วินาที
+export const CAMPUS_ROAD_WAYPOINTS: [number, number][] = STOP_SEGMENTS.flatMap((seg, idx) =>
+  idx === STOP_SEGMENTS.length - 1 ? seg : seg.slice(0, -1)
+)
 
-/**
- * DWELL_TIME - เวลาจอดที่แต่ละจุดจอด (วินาที)
- * 
- * รถจะจอดรับ-ส่งผู้โดยสารจุดละ 5 นาที
- */
-export const DWELL_TIME = 300 // 5 นาที = 300 วินาที
+export const ROUTES: BusRoute[] = [
+  {
+    id: "route-1",
+    name: "สาย 1: วงรอบภายในวิทยาเขต (NPRU Red Campus Loop)",
+    nameEn: "Route 1: NPRU Main Red Campus Loop (100% Inside Campus)",
+    color: "#e63462",
+    stops: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    description: "วิ่งเฉพาะถนนภายใน มรภ.นครปฐม ผ่านอาคารฝั่งตะวันตก หอประชุมปิ่นเกลียว สวนเฉลิมพระเกียรติ คณะครุศาสตร์ อาคาร 4 และริมสระน้ำ",
+  },
+  {
+    id: "route-2",
+    name: "สาย 2: ด่วนปิ่นเกลียว-วิทยาการจัดการ-ประตู 1 (Campus Express)",
+    nameEn: "Route 2: Pin-Kliao - Management - Gate 1 Express",
+    color: "#e63462",
+    stops: [1, 2, 5, 7, 8, 10],
+    description: "สายด่วนเชื่อมต่ออาคารหลัก หอประชุมปิ่นเกลียว คณะครุศาสตร์ และประตู 1",
+  }
+]
 
-/**
- * SIM_TICK - ระยะเวลาระหว่าง simulation tick (มิลลิวินาที)
- * 
- * ทุกๆ 2 วินาที จะอัพเดตสถานะรถเมล์
- */
-export const SIM_TICK = 2000 // 2 วินาที
+// ===================================================================
+// SECTION 3: SIMULATION CONSTANTS & INITIAL STATE
+// ===================================================================
 
-/**
- * SIM_SECONDS_PER_TICK - จำนวน "วินาที" ที่ผ่านไปในแต่ละ tick
- * 
- * เร่งความเร็ว: 1 tick = 15 วินาทีจำลอง
- * ทำให้ดูการทำงานได้เร็วขึ้นโดยไม่ต้องรอจริง 5 นาที
- */
-export const SIM_SECONDS_PER_TICK = 15
+export const TRAVEL_TIME_PER_SEGMENT = 180 // 3 นาทีต่อช่วงในความเร็วปกติ
+export const DWELL_TIME = 90 // จอด 1.5 นาทีต่อจุด
+export const SIM_TICK = 1000 // อัปเดตทุก 1 วินาทีเพื่อความนุ่มนวล
+export const SIM_SECONDS_PER_TICK = 5 // 1 tick = 5 วินาทีจำลอง
 
-// -------------------------------------------------------------------
-// Initial State - สถานะเริ่มต้นของรถเมล์
-// -------------------------------------------------------------------
-
-/**
- * initialBuses - สถานะเริ่มต้นของรถเมล์ทั้ง 3 คัน
- * 
- * กระจายตำแหน่งเพื่อให้เห็นการทำงานทันที:
- * - รถ 1: จอดอยู่ที่ประตูหลัก (P1)
- * - รถ 2: กำลังวิ่งจาก P4 ไป P5
- * - รถ 3: จอดอยู่ที่อาคารบริหาร (P8)
- */
 export const initialBuses: BusState[] = [
   { 
     id: 1, 
-    name: "รถเมล์ที่ 1", 
-    code: "รถคัน 1", 
-    currentStopIndex: 0,  // ประตูหลัก
-    progress: 0, 
-    speed: 0, 
-    passengers: 12, 
-    battery: 85, 
-    status: "จอดรับผู้โดยสาร", 
-    isDwelling: true, 
-    dwellRemaining: 180  // เหลืออีก 3 นาที
+    name: "NPRU EV Shuttle 01", 
+    code: "รถเมล์ไฟฟ้า คันที่ 1 (สายสีแดง)", 
+    plateNumber: "นฐ 40-1011 (นครปฐม)",
+    driverName: "นายสมศักดิ์ รัตนชัย",
+    driverPhone: "081-456-7890",
+    currentStopIndex: 0, // ประตู 1
+    progress: 0.2, 
+    speed: 18, 
+    passengers: 14, 
+    maxCapacity: 24,
+    battery: 92, 
+    status: "กำลังเดินทาง", 
+    isDwelling: false, 
+    dwellRemaining: 0,
+    routeId: "route-1",
+    currentLat: 13.83550,
+    currentLng: 100.02730,
+    heading: 280,
+    wheelchairAccessible: true,
+    acTemp: 24,
+    lastUpdated: "เรียลไทม์ (GPS ออนไลน์)"
   },
   { 
     id: 2, 
-    name: "รถเมล์ที่ 2", 
-    code: "รถคัน 2", 
-    currentStopIndex: 3,  // กำลังวิ่งจากอาคารวิทยาศาสตร์
-    progress: 0.4,        // ไปได้ 40% ของทาง
-    speed: 22, 
-    passengers: 8, 
-    battery: 68, 
+    name: "NPRU EV Shuttle 02", 
+    code: "รถเมล์ไฟฟ้า คันที่ 2 (สายสีแดง)", 
+    plateNumber: "นฐ 40-1012 (นครปฐม)",
+    driverName: "นายประสิทธิ์ บุญมี",
+    driverPhone: "089-223-4455",
+    currentStopIndex: 4, // หอประชุมปิ่นเกลียว
+    progress: 0.5, 
+    speed: 20, 
+    passengers: 19, 
+    maxCapacity: 24,
+    battery: 78, 
     status: "กำลังเดินทาง", 
     isDwelling: false, 
-    dwellRemaining: 0 
+    dwellRemaining: 0,
+    routeId: "route-1",
+    currentLat: 13.83840,
+    currentLng: 100.02840,
+    heading: 45,
+    wheelchairAccessible: true,
+    acTemp: 23.5,
+    lastUpdated: "เรียลไทม์ (GPS ออนไลน์)"
   },
   { 
     id: 3, 
-    name: "รถเมล์ที่ 3", 
-    code: "รถคัน 3", 
-    currentStopIndex: 7,  // อาคารบริหาร
-    progress: 0, 
+    name: "NPRU EV Shuttle 03", 
+    code: "รถเมล์ไฟฟ้า คันที่ 3 (สายสีแดง)", 
+    plateNumber: "นฐ 40-1013 (นครปฐม)",
+    driverName: "นายวิชาญ ใจมั่น",
+    driverPhone: "084-556-9911",
+    currentStopIndex: 7, // คณะวิทยาการจัดการ
+    progress: 0.0, 
     speed: 0, 
-    passengers: 15, 
-    battery: 48, 
+    passengers: 10, 
+    maxCapacity: 24,
+    battery: 85, 
     status: "จอดรับผู้โดยสาร", 
     isDwelling: true, 
-    dwellRemaining: 60   // เหลืออีก 1 นาที
-  },
+    dwellRemaining: 45,
+    routeId: "route-1",
+    currentLat: 13.83620,
+    currentLng: 100.03350,
+    heading: 140,
+    wheelchairAccessible: true,
+    acTemp: 24.0,
+    lastUpdated: "เรียลไทม์ (GPS ออนไลน์)"
+  }
 ]
 
 // ===================================================================
-// SECTION 3: HELPER FUNCTIONS - ฟังก์ชันช่วยคำนวณ
+// SECTION 4: HELPER FUNCTIONS & MATHEMATICAL LOGIC
 // ===================================================================
 
 /**
- * calcEtaSeconds - คำนวณเวลาที่รถเมล์จะถึงจุดจอดที่กำหนด
- * 
- * Algorithm:
- * 1. ถ้ารถจอดอยู่ที่จุดนั้นแล้ว => return 0
- * 2. ถ้ารถกำลังจอด => เวลาที่เหลือ + เวลาเดินทาง + เวลาจอดระหว่างทาง
- * 3. ถ้ารถกำลังวิ่ง => เวลาเดินทางที่เหลือ + เวลาจอด + เวลาเดินทางเพิ่ม
- * 
- * @param bus - สถานะรถเมล์ปัจจุบัน
- * @param targetStopIndex - index ของจุดจอดเป้าหมาย (0-9)
- * @returns เวลาเป็นวินาที หรือ null ถ้าคำนวณไม่ได้
- * 
- * @example
- * // รถ 1 อยู่ที่ P1, ต้องการรู้ว่าจะถึง P3 เมื่อไหร่
- * const eta = calcEtaSeconds(bus1, 2) // index 2 = P3
- * // => 660 วินาที (11 นาที)
+ * คำนวณระยะทางจริงระหว่าง 2 พิกัดด้วย Haversine Formula (เมตร)
+ */
+export function calculateDistanceMeters(
+  lat1: number, 
+  lon1: number, 
+  lat2: number, 
+  lon2: number
+): number {
+  const R = 6371e3 // รัศมีโลกในหน่วยเมตร
+  const φ1 = (lat1 * Math.PI) / 180
+  const φ2 = (lat2 * Math.PI) / 180
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+
+  return Math.round(R * c)
+}
+
+/**
+ * คำนวณมุมองศา (Heading / Bearing) ระหว่างจุดเริ่มต้นและจุดสิ้นสุด (0 - 360 องศา)
+ */
+export function calculateBearing(
+  lat1: number, 
+  lon1: number, 
+  lat2: number, 
+  lon2: number
+): number {
+  const φ1 = (lat1 * Math.PI) / 180
+  const φ2 = (lat2 * Math.PI) / 180
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180
+
+  const y = Math.sin(Δλ) * Math.cos(φ2)
+  const x =
+    Math.cos(φ1) * Math.sin(φ2) -
+    Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ)
+  const θ = Math.atan2(y, x)
+  return Math.round(((θ * 180) / Math.PI + 360) % 360)
+}
+
+/**
+ * หาพิกัด GPS ณ จุดใดๆ บนเส้นทางตามความคืบหน้าระหว่าง 2 จุดจอด
+ * โดยคำนวณตามแนวถนนจริงภายในมหาวิทยาลัย (STOP_SEGMENTS) ไม่วิ่งตัดอาคาร และไม่วิ่งออกนอก ม.
+ */
+export function getInterpolatedBusCoordinates(
+  fromStopIndex: number,
+  progress: number
+): { lat: number; lng: number; heading: number } {
+  const segment = STOP_SEGMENTS[fromStopIndex] || [
+    [stops[fromStopIndex].lat, stops[fromStopIndex].lng],
+    [stops[(fromStopIndex + 1) % stops.length].lat, stops[(fromStopIndex + 1) % stops.length].lng],
+  ]
+
+  if (segment.length <= 1) {
+    return {
+      lat: segment[0][0],
+      lng: segment[0][1],
+      heading: 0,
+    }
+  }
+
+  // Calculate cumulative distances along segment sub-lines
+  const distances: number[] = []
+  let totalDist = 0
+
+  for (let i = 0; i < segment.length - 1; i++) {
+    const d = calculateDistanceMeters(
+      segment[i][0],
+      segment[i][1],
+      segment[i + 1][0],
+      segment[i + 1][1]
+    )
+    distances.push(d)
+    totalDist += d
+  }
+
+  if (totalDist === 0) {
+    return {
+      lat: segment[0][0],
+      lng: segment[0][1],
+      heading: 0,
+    }
+  }
+
+  const clampedProgress = Math.max(0, Math.min(1, progress))
+  const targetDist = clampedProgress * totalDist
+
+  let accumulated = 0
+  for (let i = 0; i < distances.length; i++) {
+    const subDist = distances[i]
+    if (accumulated + subDist >= targetDist || i === distances.length - 1) {
+      const subProgress = subDist > 0 ? (targetDist - accumulated) / subDist : 0
+      const p1 = segment[i]
+      const p2 = segment[i + 1]
+
+      const lat = p1[0] + (p2[0] - p1[0]) * subProgress
+      const lng = p1[1] + (p2[1] - p1[1]) * subProgress
+      const heading = calculateBearing(p1[0], p1[1], p2[0], p2[1])
+
+      return { lat, lng, heading }
+    }
+    accumulated += subDist
+  }
+
+  const lastPoint = segment[segment.length - 1]
+  const prevPoint = segment[segment.length - 2]
+  return {
+    lat: lastPoint[0],
+    lng: lastPoint[1],
+    heading: calculateBearing(prevPoint[0], prevPoint[1], lastPoint[0], lastPoint[1]),
+  }
+}
+
+/**
+ * คำนวณเวลาที่รถเมล์จะมาถึงจุดจอด (ETA เป็นวินาที)
  */
 export function calcEtaSeconds(bus: BusState, targetStopIndex: number): number | null {
-  // กรณีพิเศษ: รถจอดอยู่ที่จุดเป้าหมายแล้ว
   if (bus.currentStopIndex === targetStopIndex && bus.isDwelling) {
     return 0
   }
   
-  const totalStops = stops.length // 10 จุดจอด
+  const totalStops = stops.length
   let stopsAway: number
   
   if (bus.isDwelling) {
-    // กรณี 1: รถกำลังจอดอยู่ที่จุดจอด
-    // ต้องรอออกก่อน แล้วค่อยเดินทาง
-    
     stopsAway = (targetStopIndex - bus.currentStopIndex + totalStops) % totalStops
-    if (stopsAway === 0) return 0 // อยู่ที่จุดเป้าหมายแล้ว
+    if (stopsAway === 0) return 0
     
-    // คำนวณเวลา:
-    // 1. เวลาที่เหลือก่อนออก (dwellRemaining)
-    // 2. เวลาเดินทางทั้งหมด (จำนวนจุด × เวลาต่อจุด)
-    // 3. เวลาจอดที่จุดระหว่างทาง (จำนวนจุด - 1)
     const travelTime = stopsAway * TRAVEL_TIME_PER_SEGMENT
     const intermediateDwells = (stopsAway - 1) * DWELL_TIME
-    
     return bus.dwellRemaining + travelTime + intermediateDwells
-    
   } else {
-    // กรณี 2: รถกำลังเดินทางระหว่างจุดจอด
-    
     const nextStopIndex = (bus.currentStopIndex + 1) % totalStops
     
-    // ถ้าจุดถัดไปคือเป้าหมาย
     if (nextStopIndex === targetStopIndex) {
-      // เหลือแค่ระยะทางที่ยังไม่ได้วิ่ง
       return Math.round((1 - bus.progress) * TRAVEL_TIME_PER_SEGMENT)
     }
     
-    // ถ้าต้องผ่านหลายจุด
     stopsAway = (targetStopIndex - nextStopIndex + totalStops) % totalStops
-    
-    // คำนวณเวลา:
-    // 1. เวลาที่เหลือถึงจุดถัดไป
-    // 2. เวลาจอดที่จุดถัดไป
-    // 3. เวลาเดินทางเพิ่มเติม
-    // 4. เวลาจอดที่จุดระหว่างทาง
     const remainingToNext = Math.round((1 - bus.progress) * TRAVEL_TIME_PER_SEGMENT)
     const dwellAtNext = DWELL_TIME
     const additionalTravel = stopsAway * TRAVEL_TIME_PER_SEGMENT
@@ -361,14 +706,7 @@ export function calcEtaSeconds(bus: BusState, targetStopIndex: number): number |
 }
 
 /**
- * formatTime - แปลงวินาทีเป็น MM:SS
- * 
- * @param seconds - จำนวนวินาที
- * @returns string ในรูปแบบ "MM:SS"
- * 
- * @example
- * formatTime(65)  // => "01:05"
- * formatTime(300) // => "05:00"
+ * แปลงวินาทีเป็น MM:SS
  */
 export function formatTime(seconds: number): string {
   const minutes = Math.floor(seconds / 60)
@@ -377,89 +715,39 @@ export function formatTime(seconds: number): string {
 }
 
 /**
- * formatMinutes - แปลงวินาทีเป็นจำนวนนาที (ปัดขึ้น, ขั้นต่ำ 1)
- * 
- * ใช้สำหรับแสดง ETA แบบย่อ เช่น "5 นาที"
- * 
- * @param seconds - จำนวนวินาที
- * @returns จำนวนนาที (ขั้นต่ำ 1)
- * 
- * @example
- * formatMinutes(30)  // => 1 (ไม่ใช่ 0.5)
- * formatMinutes(301) // => 6 (ปัดขึ้น)
+ * แปลงวินาทีเป็นจำนวนนาที (ปัดขึ้น)
  */
 export function formatMinutes(seconds: number): number {
   return Math.max(1, Math.ceil(seconds / 60))
 }
 
 // ===================================================================
-// SECTION 4: SCHEDULE DATA - ข้อมูลตารางเวลา
+// SECTION 5: SCHEDULE GENERATOR (NPRU TIMETABLE)
 // ===================================================================
 
-/**
- * scheduleStops - รายชื่อจุดจอดสำหรับตารางเวลา
- * 
- * เรียงตามลำดับเส้นทาง ใช้แสดงเป็น column headers
- */
-export const scheduleStops = [
-  "ประตูหลัก",
-  "คณะครุศาสตร์",
-  "หอสมุดกลาง",
-  "อาคารวิทยาศาสตร์",
-  "อาคารกีฬา",
-  "หอพักนักศึกษา",
-  "คณะวิศวกรรมศาสตร์",
-  "อาคารบริหาร",
-  "โรงอาหาร",
-  "ศูนย์แพทย์",
-]
+export const scheduleStops = stops.map(s => s.name)
+export const scheduleStopCodes = stops.map(s => s.code)
 
-/**
- * scheduleStopCodes - รหัสจุดจอดย่อ (สำหรับแสดงใต้ชื่อในตาราง)
- */
-export const scheduleStopCodes = ["P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9", "P10"]
-
-/**
- * generateSchedule - สร้างตารางเวลาเดินรถ
- * 
- * สร้างตารางตั้งแต่ 08:00 - 16:00
- * แต่ละแถวคือรอบออกจากประตูหลัก (ทุก 30 นาที)
- * แต่ละ column คือเวลาถึงจุดจอดนั้น (ห่างกัน 5 นาที)
- * 
- * @returns Array ของ row objects
- * 
- * @example
- * const schedule = generateSchedule()
- * // [
- * //   { label: "08:00", times: ["08:00", "08:05", "08:10", ...] },
- * //   { label: "08:30", times: ["08:30", "08:35", "08:40", ...] },
- * //   ...
- * // ]
- */
 export function generateSchedule(): { label: string; times: string[] }[] {
   const rows: { label: string; times: string[] }[] = []
-  const startHour = 8   // เริ่ม 08:00
-  const endHour = 16    // สิ้นสุด 16:00
+  const startHour = 7   // เริ่ม 07:30 น.
+  const endHour = 18    // สิ้นสุด 18:00 น.
 
-  // วนสร้างแต่ละรอบ (ทุก 30 นาที)
   for (let hour = startHour; hour <= endHour; hour++) {
-    for (const minute of [0, 30]) {
-      // หยุดที่ 16:00 (ไม่มี 16:30)
+    for (const minute of [0, 20, 40]) {
+      if (hour === 7 && minute < 30) continue
       if (hour === endHour && minute > 0) break
       
-      // สร้าง label เวลาออก
       const label = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`
-      
-      // สร้างเวลาถึงแต่ละจุดจอด (ห่างกันจุดละ 5 นาที)
       const times: string[] = []
-      for (let stopIndex = 0; stopIndex < 10; stopIndex++) {
-        const offsetMinutes = stopIndex * 5  // จุดที่ 0 = 0 นาที, จุดที่ 1 = 5 นาที, ...
+      
+      for (let stopIndex = 0; stopIndex < stops.length; stopIndex++) {
+        const offsetMinutes = stopIndex * 3 // เฉลี่ย 3 นาทีต่อป้าย
         const totalMinutes = minute + offsetMinutes
         const arrivalMinute = totalMinutes % 60
         const arrivalHour = hour + Math.floor(totalMinutes / 60)
         
-        // ถ้าเลย 16:45 ให้เว้นว่าง (รถหยุดวิ่ง)
-        if (arrivalHour > 16 || (arrivalHour === 16 && arrivalMinute > 45)) {
+        if (arrivalHour > 18 || (arrivalHour === 18 && arrivalMinute > 30)) {
           times.push("")
         } else {
           times.push(`${String(arrivalHour).padStart(2, "0")}:${String(arrivalMinute).padStart(2, "0")}`)
@@ -474,23 +762,16 @@ export function generateSchedule(): { label: string; times: string[] }[] {
 }
 
 // ===================================================================
-// SECTION 5: PROBLEM REPORT DATA - ข้อมูลแบบฟอร์มรายงานปัญหา
+// SECTION 6: PROBLEM REPORTS
 // ===================================================================
 
-/**
- * problemTypes - ประเภทปัญหาที่สามารถรายงานได้
- * 
- * @property id - รหัสสำหรับ form submission
- * @property label - ข้อความภาษาไทยแสดงใน UI
- * @property icon - ชื่อ icon สำหรับ mapping
- */
 export const problemTypes = [
-  { id: "late",     label: "รถเมล์มาช้า",           icon: "clock" },
-  { id: "crowded",  label: "รถเมล์คนเยอะมาก",       icon: "users" },
-  { id: "broken",   label: "รถเมล์เสีย",           icon: "wrench" },
-  { id: "noise",    label: "สิ่งอำนวยความสะดวกเสีย", icon: "volume" },
-  { id: "safety",   label: "ปัญหาความปลอดภัย",      icon: "alert" },
-  { id: "clean",    label: "ความสะอาด",            icon: "sparkles" },
-  { id: "behavior", label: "พฤติกรรมคนขับ",         icon: "user" },
-  { id: "other",    label: "อื่นๆ",                icon: "more" },
+  { id: "late",     label: "รถมาช้ากว่าตารางเวลา",        icon: "clock" },
+  { id: "crowded",  label: "ผู้โดยสารหนาแน่น/ไม่มีที่นั่ง", icon: "users" },
+  { id: "broken",   label: "แอร์ไม่เย็น / รถขัดข้อง",     icon: "wrench" },
+  { id: "ramp",     label: "ปัญหาทางลาด/วีลแชร์",        icon: "wheelchair" },
+  { id: "stop",     label: "ป้ายหยุดรถ/จุดจอดชำรุด",     icon: "alert" },
+  { id: "clean",    label: "ความสะอาดภายในรถ",           icon: "sparkles" },
+  { id: "behavior", label: "การขับขี่/มารยาทพนักงาน",     icon: "user" },
+  { id: "other",    label: "ข้อเสนอแนะอื่นๆ",            icon: "more" },
 ]
