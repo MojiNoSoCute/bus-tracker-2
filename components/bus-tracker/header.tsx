@@ -123,7 +123,7 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
 
               {/* Subtitle: ชื่อมหาวิทยาลัยและจำนวนรถ */}
               <p className="text-sm sm:text-base text-white/90 font-medium">
-                ม.ราชภัฏนครปฐม · วิ่งเฉพาะภายในวิทยาเขต (3 คัน)
+                ม.ราชภัฏนครปฐม · วิ่งเฉพาะภายในวิทยาเขต (4 คัน)
               </p>
             </div>
           </div>

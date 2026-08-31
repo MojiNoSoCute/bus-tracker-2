@@ -30,6 +30,22 @@
   animation: bus-radar 2s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
+/* ให้ไอคอนรถเลื่อนและหมุนตามทิศทางอย่างนุ่มนวลระหว่าง tick ของการจำลอง */
+.leaflet-marker-icon.custom-bus-marker-wrapper {
+  transition: transform 0.95s linear;
+}
+
+.bus-rotate {
+  transition: transform 0.95s linear;
+}
+
+@keyframes bus-dot-ping {
+  75%, 100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
 .custom-leaflet-popup .leaflet-popup-content-wrapper {
   padding: 0;
   border-radius: 1rem;

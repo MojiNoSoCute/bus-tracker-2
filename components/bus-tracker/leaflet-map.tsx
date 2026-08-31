@@ -7,6 +7,7 @@ import {
   type BusStop, 
   stops, 
   CAMPUS_ROAD_WAYPOINTS, 
+  EXTRA_ROAD_SEGMENTS,
   NPRU_CENTER,
   NPRU_BOUNDS,
   NPRU_CAMPUS_POLYGON,
@@ -40,7 +41,7 @@ import {
 interface LeafletMapProps {
   buses: BusState[]
   selectedBusId: number | null
-  onSelectBus: (busId: number) => void
+  onSelectBus: (busId: number | null) => void
   selectedStopId: number | null
   onSelectStop: (stopId: number) => void
   isSimulating: boolean
@@ -71,6 +72,8 @@ export default function LeafletMap({
   const userAccuracyCircleRef = useRef<L.Circle | null>(null)
   const routePolylineRef = useRef<L.Polyline | null>(null)
   const routeGlowPolylineRef = useRef<L.Polyline | null>(null)
+  const openedPopupStopRef = useRef<number | null>(null)
+  const dismissedPopupStopRef = useRef<number | null>(null)
 
   const [mapLayer, setMapLayer] = useState<MapLayerType>("osm")
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -194,6 +197,25 @@ export default function LeafletMap({
     }).addTo(map)
     routePolylineRef.current = mainLine
 
+    EXTRA_ROAD_SEGMENTS.forEach((seg) => {
+      L.polyline(seg, {
+        color: "#e63462",
+        weight: 10,
+        opacity: 0.3,
+        lineCap: "round",
+        lineJoin: "round",
+      }).addTo(map)
+
+      L.polyline(seg, {
+        color: "#e63462",
+        weight: 5,
+        opacity: 0.95,
+        dashArray: "8, 8",
+        lineCap: "round",
+        lineJoin: "round",
+      }).addTo(map)
+    })
+
     // 6. Add Stop Markers
     stops.forEach((stop) => {
       const stopIcon = L.divIcon({
@@ -215,13 +237,20 @@ export default function LeafletMap({
       const marker = L.marker([stop.lat, stop.lng], { icon: stopIcon })
         .addTo(map)
         .on("click", () => {
+          dismissedPopupStopRef.current = null
           onSelectStop(stop.id)
+        })
+        .on("popupclose", () => {
+          openedPopupStopRef.current = null
+          dismissedPopupStopRef.current = stop.id
         })
 
       stopMarkersRef.current.set(stop.id, marker)
     })
 
     return () => {
+      busMarkersRef.current.clear()
+      stopMarkersRef.current.clear()
       map.remove()
       mapInstanceRef.current = null
     }
@@ -248,63 +277,64 @@ export default function LeafletMap({
 
     buses.forEach((bus) => {
       const isSelected = selectedBusId === bus.id
-      const color = bus.id === 1 ? "#E53935" : bus.id === 2 ? "#F59E0B" : "#8B5CF6"
-      const statusBg = bus.isDwelling ? "bg-amber-500" : "bg-emerald-500"
+      const color = bus.id === 1 ? "#E53935" : bus.id === 2 ? "#F59E0B" : bus.id === 3 ? "#8B5CF6" : "#3B82F6"
 
       const busHtml = `
-        <div class="relative flex items-center justify-center cursor-pointer transition-transform duration-300" style="transform: scale(${isSelected ? 1.25 : 1});">
-          <!-- Pulse Radar Wave -->
-          <div class="absolute w-12 h-12 rounded-full bus-radar-pulse" style="background-color: ${color};"></div>
-          
-          <!-- Bus Marker Body -->
-          <div class="relative flex items-center justify-center w-10 h-10 rounded-full bg-slate-900 border-2 border-white shadow-xl text-white font-black text-xs z-10" style="box-shadow: 0 0 15px ${color};">
-            <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M8 6v6"></path>
-              <path d="M15 6v6"></path>
-              <path d="M2 12h19.6"></path>
-              <path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.6 19 6 17.8 6H5.2C4 6 2.9 6.6 2.6 7.8L1.2 12.8c-.1.4-.2.8-.2 1.2 0 .4.1.8.2 1.2.3 1.1.8 2.8.8 2.8h3"></path>
-              <circle cx="7" cy="18" r="2"></circle>
-              <circle cx="17" cy="18" r="2"></circle>
-            </svg>
-            <span class="absolute -top-2 -right-1 px-1.5 py-0.2 rounded-full text-[9px] font-black text-white ${statusBg} border border-white">
-              ${bus.id}
-            </span>
+        <div style="position: relative; width: 46px; height: 46px; cursor: pointer;">
+          <div class="bus-radar-pulse" style="position:absolute; left:50%; top:50%; width:46px; height:46px; margin-left:-23px; margin-top:-23px; border-radius:999px; background-color:${color};"></div>
+          <div class="bus-rotate" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; transform: rotate(${bus.heading}deg) scale(${isSelected ? 1.3 : 1});">
+            <div style="position:relative; width:40px; height:40px; border-radius:999px; background:#0f172a; border:2.5px solid #ffffff; box-shadow:0 0 16px ${color}, 0 4px 10px rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 6v6"></path>
+                <path d="M15 6v6"></path>
+                <path d="M2 12h19.6"></path>
+                <path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.6 19 6 17.8 6H5.2C4 6 2.9 6.6 2.6 7.8L1.2 12.8c-.1.4-.2.8-.2 1.2 0 .4.1.8.2 1.2.3 1.1.8 2.8.8 2.8h3"></path>
+                <circle cx="7" cy="18" r="2"></circle>
+                <circle cx="17" cy="18" r="2"></circle>
+              </svg>
+            </div>
           </div>
-
-          <!-- Label Tag -->
-          <div class="absolute -bottom-6 whitespace-nowrap bg-slate-900/90 text-white font-bold text-[10px] px-2 py-0.5 rounded-full border border-slate-700 shadow-md flex items-center gap-1 z-20">
-            <span class="w-1.5 h-1.5 rounded-full ${bus.isDwelling ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'}"></span>
-            ${bus.speed} km/h · ${bus.battery}%
+          <span class="bus-badge" style="position:absolute; top:-6px; right:-2px; min-width:16px; padding:1px 4px; border-radius:999px; background:${bus.isDwelling ? "#f59e0b" : "#10b981"}; border:1px solid #ffffff; color:#ffffff; font-size:9px; font-weight:800; text-align:center; line-height:1.3;">${bus.id}</span>
+          <div style="position:absolute; top:48px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:4px; background:rgba(15,23,42,0.9); color:#ffffff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:999px; border:1px solid #334155; box-shadow:0 2px 6px rgba(0,0,0,0.3); white-space:nowrap;">
+            <span class="bus-status-dot" style="width:6px; height:6px; border-radius:999px; background:${bus.isDwelling ? "#fbbf24" : "#34d399"};${bus.isDwelling ? " animation: bus-dot-ping 1s cubic-bezier(0,0,0.2,1) infinite;" : ""}"></span>
+            <span class="bus-label-text">${bus.speed} km/h · ${Math.round(bus.battery)}%</span>
           </div>
         </div>
       `
 
       let marker = busMarkersRef.current.get(bus.id)
+      if (marker && !map.hasLayer(marker)) marker = undefined
       if (!marker) {
         const busIcon = L.divIcon({
           className: "custom-bus-marker-wrapper",
           html: busHtml,
-          iconSize: [40, 40],
-          iconAnchor: [20, 20],
+          iconSize: [46, 46],
+          iconAnchor: [23, 23],
         })
 
         marker = L.marker([bus.currentLat, bus.currentLng], { icon: busIcon, zIndexOffset: 1000 })
           .addTo(map)
           .on("click", () => {
-            onSelectBus(bus.id)
+            onSelectBus(selectedBusId === bus.id ? null : bus.id)
           })
 
         busMarkersRef.current.set(bus.id, marker)
       } else {
         marker.setLatLng([bus.currentLat, bus.currentLng])
-        marker.setIcon(
-          L.divIcon({
-            className: "custom-bus-marker-wrapper",
-            html: busHtml,
-            iconSize: [40, 40],
-            iconAnchor: [20, 20],
-          })
-        )
+        const el = marker.getElement()
+        if (el) {
+          const rotateEl = el.querySelector(".bus-rotate") as HTMLElement | null
+          if (rotateEl) rotateEl.style.transform = `rotate(${bus.heading}deg) scale(${isSelected ? 1.3 : 1})`
+          const labelEl = el.querySelector(".bus-label-text")
+          if (labelEl) labelEl.textContent = `${bus.speed} km/h · ${Math.round(bus.battery)}%`
+          const dotEl = el.querySelector(".bus-status-dot") as HTMLElement | null
+          if (dotEl) {
+            dotEl.style.background = bus.isDwelling ? "#fbbf24" : "#34d399"
+            dotEl.style.animation = bus.isDwelling ? "bus-dot-ping 1s cubic-bezier(0,0,0.2,1) infinite" : "none"
+          }
+          const badgeEl = el.querySelector(".bus-badge") as HTMLElement | null
+          if (badgeEl) badgeEl.style.backgroundColor = bus.isDwelling ? "#f59e0b" : "#10b981"
+        }
       }
     })
   }, [buses, selectedBusId, onSelectBus])
@@ -355,7 +385,7 @@ export default function LeafletMap({
               .map(
                 (item) => `
                 <div class="flex items-center justify-between text-xs py-1 px-2 rounded-md ${
-                  item.bus.id === 1 ? 'bg-red-50 text-red-900' : item.bus.id === 2 ? 'bg-amber-50 text-amber-900' : 'bg-purple-50 text-purple-900'
+                  item.bus.id === 1 ? 'bg-red-50 text-red-900' : item.bus.id === 2 ? 'bg-amber-50 text-amber-900' : item.bus.id === 3 ? 'bg-purple-50 text-purple-900' : 'bg-blue-50 text-blue-900'
                 }">
                   <span class="font-semibold">คันที่ ${item.bus.id}</span>
                   <span class="font-bold tabular-nums">${item.text}</span>
@@ -387,8 +417,13 @@ export default function LeafletMap({
         offset: [0, -10],
       })
 
-      if (isSelected) {
+      if (
+        isSelected &&
+        dismissedPopupStopRef.current !== stop.id &&
+        openedPopupStopRef.current !== stop.id
+      ) {
         marker.openPopup()
+        openedPopupStopRef.current = stop.id
       }
     })
   }, [buses, selectedStopId])
@@ -738,12 +773,13 @@ export default function LeafletMap({
           const colorClass = 
             bus.id === 1 ? "border-red-500 text-red-700 bg-red-50" :
             bus.id === 2 ? "border-amber-500 text-amber-700 bg-amber-50" :
-            "border-purple-500 text-purple-700 bg-purple-50"
+            bus.id === 3 ? "border-purple-500 text-purple-700 bg-purple-50" :
+            "border-blue-500 text-blue-700 bg-blue-50"
 
           return (
             <button
               key={bus.id}
-              onClick={() => onSelectBus(bus.id)}
+              onClick={() => onSelectBus(isSelected ? null : bus.id)}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-bold text-xs transition-transform active:scale-95 ${
                 isSelected ? `${colorClass} ring-2 ring-offset-1 ring-slate-900 shadow-sm` : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
               }`}

@@ -280,10 +280,10 @@ export function LiveTracking() {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           {buses.map((bus) => {
             const isSelected = selectedBusId === bus.id
-            const color = bus.id === 1 ? "#E53935" : bus.id === 2 ? "#F59E0B" : "#8B5CF6"
+            const color = bus.id === 1 ? "#E53935" : bus.id === 2 ? "#F59E0B" : bus.id === 3 ? "#8B5CF6" : "#3B82F6"
             const nextStopIndex = (bus.currentStopIndex + 1) % stops.length
             const currentStop = stops[bus.currentStopIndex]
             const nextStop = stops[nextStopIndex]
@@ -478,10 +478,10 @@ export function LiveTracking() {
                   {stop.building}
                 </p>
 
-                {/* ETAs for all 3 buses */}
+                {/* ETAs for all buses */}
                 <div className="space-y-1 pt-2 border-t border-border">
                   {busEtas.map((b) => {
-                    const busColor = b.busId === 1 ? "text-red-600" : b.busId === 2 ? "text-amber-600" : "text-purple-600"
+                    const busColor = b.busId === 1 ? "text-red-600" : b.busId === 2 ? "text-amber-600" : b.busId === 3 ? "text-purple-600" : "text-blue-600"
                     return (
                       <div key={b.busId} className="flex items-center justify-between text-[11px]">
                         <span className="text-muted-foreground">คันที่ {b.busId}:</span>

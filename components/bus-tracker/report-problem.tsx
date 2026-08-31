@@ -157,10 +157,10 @@ export function ReportProblem() {
           <p className="mb-2 text-sm font-bold text-foreground">
             3. รถเมล์ไฟฟ้าคันที่พบปัญหา (ถ้ามี)
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {initialBuses.map((bus) => {
               const isSelected = selectedBus === bus.id
-              const color = bus.id === 1 ? "#E53935" : bus.id === 2 ? "#F59E0B" : "#8B5CF6"
+              const color = bus.id === 1 ? "#E53935" : bus.id === 2 ? "#F59E0B" : bus.id === 3 ? "#8B5CF6" : "#3B82F6"
 
               return (
                 <button
